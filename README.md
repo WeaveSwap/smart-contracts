@@ -6,11 +6,11 @@ This Ethereum-based platform facilitates decentralized lending and borrowing of 
 
 ## Key Features
 
-**Dynamic Yield for Lenders**: Interest rates for lenders are not fixed; instead, they adjust dynamically in response to the demand for borrowed assets, optimizing returns for lenders based on market conditions.
-**Collateral-Based Borrowing**: Borrowers can secure loans by staking collateral in a specific cryptocurrency. The platform supports multiple cryptocurrencies, providing flexibility in loan options.
-**Automated Liquidation Mechanism**: To mitigate risk, the platform continuously monitors the loan-to-value (LTV) ratio of each loan. If the LTV exceeds predefined thresholds, the system can automatically liquidate the borrower's collateral to protect the lenders' interests.
-**Decentralized and Secure**: Built on the Ethereum blockchain, the platform operates in a trustless and decentralized manner, ensuring transparency and security for all transactions.
-**Interest and APY Management**: The platform includes features for managing the interest rates and annual percentage yield (APY) for both borrowing and lending, allowing for fine-tuned control over financial incentives.
+- **Dynamic Yield for Lenders**: Interest rates for lenders are not fixed; instead, they adjust dynamically in response to the demand for borrowed assets, optimizing returns for lenders based on market conditions.
+- **Collateral-Based Borrowing**: Borrowers can secure loans by staking collateral in a specific cryptocurrency. The platform supports multiple cryptocurrencies, providing flexibility in loan options.
+- **Automated Liquidation Mechanism**: To mitigate risk, the platform continuously monitors the loan-to-value (LTV) ratio of each loan. If the LTV exceeds predefined thresholds, the system can automatically liquidate the borrower's collateral to protect the lenders' interests.
+- **Decentralized and Secure**: Built on the Ethereum blockchain, the platform operates in a trustless and decentralized manner, ensuring transparency and security for all transactions.
+- **Interest and APY Management**: The platform includes features for managing the interest rates and annual percentage yield (APY) for both borrowing and lending, allowing for fine-tuned control over financial incentives.
 
 ## Technical Components
 
