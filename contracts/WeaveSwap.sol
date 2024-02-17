@@ -1,67 +1,126 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+pragma solidity ^0.8.7;
 
-/*
-How to swap tokens
+import "./PoolTracker.sol";
+import "./LiquidityPool.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-1. Evolution has 100 tokens from EvolutionCoin, which is a ERC20 token.
-2. Bob has 100 tokens from BobCoin, which is also a ERC20 token.
-3. Evolution and Bob wants to trade 10 EvolutionCoin for 20 BobCoin.
-4. Evolution or Bob deploys TokenSwap
-5. Evolution approves TokenSwap to withdraw 10 tokens from EvolutionCoin
-6. Bob approves TokenSwap to withdraw 20 tokens from BobCoin
-7. Evolution or Bob calls TokenSwap.swap()
-8. Evolution and Bob traded tokens successfully.
-*/
+error SwapRouter_tokensCantBeSwapped();
 
-contract WeaveSwap {
-    IERC20 public token1;
-    address public owner1;
-    uint public amount1;
-    IERC20 public token2;
-    address public owner2;
-    uint public amount2;
+contract SwapRouter {
 
-    constructor(
-        address _token1,
-        address _owner1,
-        uint _amount1,
-        address _token2,
-        address _owner2,
-        uint _amount2
-    ) {
-        token1 = IERC20(_token1);
-        owner1 = _owner1;
-        amount1 = _amount1;
-        token2 = IERC20(_token2);
-        owner2 = _owner2;
-        amount2 = _amount2;
+    event swap(
+        address userAddress,
+        address address1,
+        address address2,
+        uint256 address1Amount,
+        uint256 address2Amount
+    );
+
+    // Pool tracker address
+    PoolTracker poolTracker;
+
+    constructor(address tracker) {
+        poolTracker = PoolTracker(tracker);
     }
 
-    function swap() public {
-        require(msg.sender == owner1 || msg.sender == owner2, "Not authorized");
-        require(
-            token1.allowance(owner1, address(this)) >= amount1,
-            "Token 1 allowance too low"
-        );
-        require(
-            token2.allowance(owner2, address(this)) >= amount2,
-            "Token 2 allowance too low"
-        );
+    // Reentrancy Guard
+    bool internal locked;
 
-        _safeTransferFrom(token1, owner1, owner2, amount1);
-        _safeTransferFrom(token2, owner2, owner1, amount2);
+    /**
+     * @dev Modifier to prevent reentrancy attacks.
+     */
+    modifier noReentrancy() {
+        require(!locked, "No re-entrancy");
+        locked = true;
+        _;
+        locked = false;
     }
 
-    function _safeTransferFrom(
-        IERC20 token,
-        address sender,
-        address recipient,
-        uint amount
-    ) private {
-        bool sent = token.transferFrom(sender, recipient, amount);
-        require(sent, "Token transfer failed");
+    // address1 input, address2 output
+    // approve amount
+    function swapAsset(address address1, address address2, uint256 inputAmount) public noReentrancy {
+        if (poolTracker.exists(address1, address2)) {
+            // FUNCTION TO SWAP THE TOKENS if there is a direct pool
+            // FIND THE POOL
+            // PERFORM A SWAP
+            LiquidityPool pool = poolTracker.pairToPool(address1, address2);
+            uint256 startingBalanceAddress2 = IERC20(address2).balanceOf(address(this));
+            if (pool.assetOneAddress() == address1) {
+                IERC20(address1).transferFrom(msg.sender, address(this), inputAmount);
+                IERC20(address1).approve(address(pool), inputAmount);
+                pool.sellAssetOne(inputAmount);
+            } else {
+                IERC20(address1).transferFrom(msg.sender, address(this), inputAmount);
+                IERC20(address1).approve(address(pool), inputAmount);
+                pool.sellAssetTwo(inputAmount);
+            }
+            uint256 amountOutput = IERC20(address2).balanceOf(address(this)) -
+                startingBalanceAddress2;
+            IERC20(address2).transfer(msg.sender, amountOutput);
+        } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
+            // ROUTING THROUGH ANOTHER TOKEN if there is no direct pool
+            // CHECK WHICH TOKEN TO ROUTE
+            // GET THE POOLS OF ROUTED TOKEN AND ADDRESSES
+            // CALCULATE THE AMOUNT OF OUTPUT AND PERFORM THE SWAPS
+            address routingToken = poolTracker.tokenToRoute(address1, address2);
+            LiquidityPool pool1 = poolTracker.pairToPool(address1, routingToken);
+            LiquidityPool pool2 = poolTracker.pairToPool(address2, routingToken);
+            uint256 startingBalance = IERC20(routingToken).balanceOf(address(this));
+            uint256 startingBalance2 = IERC20(address2).balanceOf(address(this));
+            //SWAP 1, input token into routing  token
+            if (pool1.assetOneAddress() == address1) {
+                IERC20(address1).transferFrom(msg.sender, address(this), inputAmount);
+                IERC20(address1).approve(address(pool1), inputAmount);
+                pool1.sellAssetOne(inputAmount);
+            } else {
+                IERC20(address1).transferFrom(msg.sender, address(this), inputAmount);
+                IERC20(address1).approve(address(pool1), inputAmount);
+                pool1.sellAssetTwo(inputAmount);
+            }
+            //SWAP 2, routing token into output token
+            uint256 routingTokenInput = IERC20(routingToken).balanceOf(address(this)) -
+                startingBalance;
+            if (pool2.assetOneAddress() == address1) {
+                IERC20(routingToken).approve(address(pool2), routingTokenInput);
+                pool2.sellAssetOne(routingTokenInput);
+            } else {
+                IERC20(routingToken).approve(address(pool2), routingTokenInput);
+                pool2.sellAssetTwo(routingTokenInput);
+            }
+            uint256 address2Output = IERC20(address2).balanceOf(address(this)) - startingBalance2;
+            IERC20(address2).transfer(msg.sender, address2Output);
+        } else {
+            // Assets cant be swapped directly nor routed
+            revert SwapRouter_tokensCantBeSwapped();
+        }
+    }
+
+    // Address1 selling asset
+    // Address2 buying asset
+    // inputAmount amount of address1 we want to output
+    function getSwapAmount(
+        address address1,
+        address address2,
+        uint256 inputAmount
+    ) public view returns (uint256) {
+        uint256 output;
+        if (poolTracker.exists(address1, address2)) {
+            // Get pool
+            LiquidityPool pool = poolTracker.pairToPool(address1, address2);
+            // Get asset two
+            output = pool.getSwapQuantity(address1, inputAmount);
+        } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
+            address routingToken = poolTracker.tokenToRoute(address1, address2);
+            LiquidityPool pool1 = poolTracker.pairToPool(address1, routingToken);
+            LiquidityPool pool2 = poolTracker.pairToPool(address2, routingToken);
+            uint256 routingOutput = pool1.getSwapQuantity(address1, inputAmount);
+            output = pool2.getSwapQuantity(routingToken, routingOutput);
+        } else {
+            // Assets cant be swapped directly nor routed
+            revert SwapRouter_tokensCantBeSwapped();
+        }
+        return output;
     }
 }
