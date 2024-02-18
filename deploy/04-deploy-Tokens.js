@@ -6,14 +6,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deployer } = await getNamedAccounts();
   const { deploy, log } = deployments;
 
-  const PoolTracker = await ethers.getContract("PoolTracker");
-
-  let args = [PoolTracker.target];
+  let args = [];
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
 
   log("Deploying the contract...");
-  const SwapRouter = await deploy("SwapRouter", {
+  const token1 = await deploy("TestToken1", {
     args: args,
     log: true,
     waitConfirmations: blockConfirmations,
@@ -26,11 +24,31 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     !developmentChains.includes(network.name)
   ) {
     await verify(
-      SwapRouter.address,
+      token1.address,
       args,
-      "contracts/Dex/WeaveSwap.sol:SwapRouter"
+      "contracts/Tokens/TestToken1.sol:TestToken1"
+    );
+  }
+
+  log("Deploying the contract...");
+  const token2 = await deploy("TestToken2", {
+    args: args,
+    log: true,
+    waitConfirmations: blockConfirmations,
+    from: deployer,
+  });
+  log("The contract has been deployed!");
+
+  if (
+    process.env.ETHERSCAN_API_KEY &&
+    !developmentChains.includes(network.name)
+  ) {
+    await verify(
+      token2.address,
+      args,
+      "contracts/Tokens/TestToken2.sol:TestToken2"
     );
   }
 };
 
-module.exports.tags = ["SwapRouter", "WeaveSwap", "all"];
+module.exports.tags = ["tokens", "token"];

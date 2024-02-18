@@ -20,7 +20,7 @@ module.exports = async () => {
 
     if (process.env.ETHERSCAN_API_KEY && !developmentChains.includes(network.name)) {
         log("Verifying...")
-        await verify(lendingTracker.address, args, "contracts/LendingTracker.sol:LendingTracker")
+        await verify(lendingTracker.address, args, "contracts/Lending/LendingTracker.sol:LendingTracker")
     }
 }
 

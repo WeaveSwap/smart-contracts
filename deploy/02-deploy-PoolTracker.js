@@ -20,7 +20,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("The contract has been deployed!")
 
     if (process.env.ETHERSCAN_API_KEY && !developmentChains.includes(network.name)) {
-        await verify(poolTracker.address, args, "contracts/PoolTracker.sol:PoolTracker")
+        await verify(poolTracker.address, args, "contracts/Dex/PoolTracker.sol:PoolTracker")
     }
 }
 
