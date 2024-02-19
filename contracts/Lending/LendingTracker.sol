@@ -2,18 +2,25 @@
 
 pragma solidity ^0.8.9;
 
+// Importing necessary contracts and interfaces
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./Lending.sol";
 
-// Error handling
+// Custom error definitions for specific failure conditions
 error lendingTracker_addressNotAllowed();
 error lendingTracker_poolNotAvailable();
 error lendingTracker_amountTooHigh();
 error lendingTracker_receiptDoesntExist();
 
-// The backend is constantly checking for each user if they are getting liquidated, since the blockchain is unable to do it
+/**
+ * @title LendingTracker
+ * @dev Manages lending, borrowing, and collateral operations for a decentralized finance platform.
+ * Utilizes external price feeds for valuation and includes functionality for yield farming.
+ * This contract is responsible for tracking user interactions with lending pools and their collateralized positions.
+ */
 contract LendingTracker {
+    // Events for logging various actions within the contract
     event userBorrowed(address user, address tokenAddress, uint256 tokenAmount);
     event userLended(address user, address tokenAddress, uint256 tokenAmount);
     event userWithdrawnLendedTokens(
@@ -45,24 +52,24 @@ contract LendingTracker {
     );
     event collateralTerminated(address user);
 
-    // Max Loan to Value, loan must always be under this percentage of staked collateral
+    // Maximum Loan-to-Value (LTV) ratio for borrowing against collateral
     int256 ltv = 75;
 
-    // Owner address
+    // Owner of the contract, set at deployment
     address owner;
 
-    // Constructor to set the owner
+    // Constructor sets the deploying address as the owner
     constructor() {
         owner = msg.sender;
     }
 
-    // Token pool and chainlink price feed
+    // Struct to hold lending pool and its associated price feed information
     struct tokenPool {
         Lending poolAddress; // ERC-20 Token address
-        address priceAddress; //Chainlink price feed
+        address priceAddress; // Chainlink price feed
     }
 
-    // Borrow receipt
+    // Struct to track borrowing receipts for users
     struct borrowReceipt {
         address tokenAddress;
         uint256 amount;
@@ -70,7 +77,7 @@ contract LendingTracker {
         uint256 apy;
     }
 
-    // Mappings of lended, borrowed and collateralized tokens
+    // Mappings to track lending pools, user interactions, and collateral
     mapping(address => tokenPool) public tokenToPool; // To find pool for specific ERC20 address
 
     mapping(address => mapping(address => uint256)) public userLendedAmount; // Lended amout of specific token for user
@@ -80,11 +87,16 @@ contract LendingTracker {
     mapping(address => address[]) public collateralTokens; // All collateralized token addresses of user
 
     mapping(address => address[]) public borrowedTokens; // All borrowed token addresses of user
-    mapping(address => uint256) public borrowingId; // Current user number of ids
+    mapping(address => uint256) public borrowingId; // Current borrowing Id of the user, it increments with each borrow
     mapping(address => mapping(address => uint256[])) public userBorrowReceipts; // All receipt ids for a certain token address of user
     mapping(address => mapping(uint256 => borrowReceipt)) public borrowReceipts; // Id to receipt
 
-    // Adds new pool to lend and borrow from, deployes a new Lending.sol smart contract and tracks it
+    /**
+     * @notice Adds a new token pool for lending and borrowing.
+     * @dev Deploys a new Lending contract for the token and registers it along with its price feed.
+     * @param tokenAddress Address of the token for the new lending pool.
+     * @param priceAddress Address of the Chainlink price feed for the token.
+     */
     function addTokenPool(address tokenAddress, address priceAddress) public {
         if (msg.sender != owner) {
             revert lendingTracker_addressNotAllowed();
@@ -93,7 +105,12 @@ contract LendingTracker {
         tokenToPool[tokenAddress] = tokenPool(newPool, priceAddress);
     }
 
-    // Change price feed(if we get new price provider)
+    /**
+     * @notice Changes the price feed for a given token.
+     * @dev Allows the contract owner to update the price feed address in case of changes or migration.
+     * @param tokenAddress Address of the token whose price feed is being updated.
+     * @param priceAddress New address of the Chainlink price feed.
+     */
     function changePriceFeed(
         address tokenAddress,
         address priceAddress
@@ -109,7 +126,11 @@ contract LendingTracker {
         tokenToPool[tokenAddress].priceAddress = priceAddress;
     }
 
-    // Change borrowing APY
+    /**
+     * @notice Updates the borrowing APY for a specified token pool.
+     * @param tokenAddress Address of the token whose lending pool APY is to be changed.
+     * @param newAPY The new annual percentage yield for borrowing.
+     */
     function changeBorrowingAPY(address tokenAddress, uint256 newAPY) public {
         if (msg.sender != owner) {
             revert lendingTracker_addressNotAllowed();
@@ -117,7 +138,13 @@ contract LendingTracker {
         tokenToPool[tokenAddress].poolAddress.setBorrowingAPY(newAPY);
     }
 
-    // Borrows the token
+    /**
+     * @notice Allows a user to borrow tokens from a specific lending pool.
+     * @dev The function checks for sufficient liquidity and adherence to the loan-to-value (LTV) ratio before permitting the borrow.
+     * Updates the user's borrow receipts to keep track of the borrowed amount and terms.
+     * @param tokenAddress The address of the token the user wishes to borrow.
+     * @param tokenAmount The amount of tokens the user wants to borrow.
+     */
     function borrowToken(address tokenAddress, uint256 tokenAmount) public {
         // Checks if the pool exists
         if (address(tokenToPool[tokenAddress].poolAddress) == address(0)) {
@@ -154,7 +181,13 @@ contract LendingTracker {
         emit userBorrowed(msg.sender, tokenAddress, tokenAmount);
     }
 
-    // Lends the token
+    /**
+     * @notice Enables a user to lend tokens to a specific pool.
+     * @dev Transfers tokens from the user to the lending pool contract and updates the tracking of lent amounts.
+     * Requires token approval from the user to the LendingTracker contract.
+     * @param tokenAddress The address of the token being lent.
+     * @param tokenAmount The amount of tokens the user is lending.
+     */
     function lendToken(address tokenAddress, uint256 tokenAmount) public {
         // Checks if pool exists
         if (address(tokenToPool[tokenAddress].poolAddress) == address(0)) {
@@ -184,7 +217,12 @@ contract LendingTracker {
         emit userLended(msg.sender, tokenAddress, tokenAmount);
     }
 
-    // Withdraws a lended amount, finished
+    /**
+     * @notice Withdraws tokens previously lent to the lending pool by the user.
+     * @dev Ensures the user cannot withdraw more than they have lent. Adjusts the user's lent amount record accordingly.
+     * @param tokenAddress The address of the token to withdraw from the lending pool.
+     * @param tokenAmount The amount of tokens to withdraw.
+     */
     function withdrawLendedToken(
         address tokenAddress,
         uint256 tokenAmount
@@ -206,7 +244,12 @@ contract LendingTracker {
         emit userWithdrawnLendedTokens(msg.sender, tokenAddress, tokenAmount);
     }
 
-    // Stakes the collateral
+    /**
+     * @notice Allows users to stake tokens as collateral for borrowing.
+     * @dev Transfers tokens from the user to this contract for collateralization. Updates the collateral tracking mappings.
+     * @param tokenAddress The address of the token being staked as collateral.
+     * @param tokenAmount The amount of the token to stake.
+     */
     function stakeCollateral(address tokenAddress, uint256 tokenAmount) public {
         // Checks if pool exists
         if (address(tokenToPool[tokenAddress].poolAddress) == address(0)) {
@@ -231,7 +274,12 @@ contract LendingTracker {
         emit userStakedCollateral(msg.sender, tokenAddress, tokenAmount);
     }
 
-    // Unstake collateral, need to borrow 0 to unstake(can calculate how much they can take based on ltv)
+    /**
+     * @notice Permits users to withdraw their staked collateral, provided they have no outstanding loans.
+     * @dev Ensures that the withdrawal does not violate the loan-to-value (LTV) requirements.
+     * @param tokenAddress The address of the token to unstake.
+     * @param tokenAmount The amount of the token to unstake.
+     */
     function unstakeCollateral(
         address tokenAddress,
         uint256 tokenAmount
@@ -260,10 +308,15 @@ contract LendingTracker {
         emit userUnstakedCollateral(msg.sender, tokenAddress, tokenAmount);
     }
 
-    // Sepolia testnet btc/usd price feed 0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43, wbtc sepolia 0xE544cAd11e108775399358Bd0790bb72c9e3AD9E
-
-    // Liquidity Treshold view, gets the percentage of ltv currently by the user
-    // Finished, somehow we need to keep track of all the user addresses so the backend can check treshold for each user
+    /**
+     * @notice Computes the current loan-to-value (LTV) ratio for a user's borrowed funds against their staked collateral.
+     * @dev Used to determine if a user's borrowings are within permissible limits. Can also factor in an additional amount
+     * being borrowed or provided as collateral.
+     * @param user The address of the user.
+     * @param additionalTokenAddress Optionally, the address of a token being considered for borrowing/collateral.
+     * @param tokenAmount Optionally, the amount of the additional token being considered.
+     * @return The LTV ratio as a percentage.
+     */
     function liquidityTreshold(
         address user,
         address additionalTokenAddress,
@@ -319,8 +372,11 @@ contract LendingTracker {
         return (borrowedUSD * 100) / collateralUSD;
     }
 
-    // Terminate Collateral
-    // We can make some kind of point system outside of smart contract that tracks addresses that terminate and rewards them
+    /**
+     * @notice Initiates the liquidation of a user's collateral if their LTV ratio exceeds the maximum permitted value.
+     * @dev Meant to be called by an external mechanism (like a keeper) that monitors LTV ratios.
+     * @param userAddress The address of the user whose collateral is being liquidated.
+     */
     function terminateCollateral(address userAddress) public {
         // Check if the ltv is too high, if it is not reverts
         if (liquidityTreshold(userAddress, address(0), 0) <= ltv) {
@@ -337,15 +393,25 @@ contract LendingTracker {
         emit collateralTerminated(userAddress);
     }
 
-    // Price converter to USD, uses chainlink price aggregator
+    /**
+     * @notice Converts the token amount to its USD equivalent using Chainlink price feeds.
+     * @dev Utility function to assist in calculating collateral values and loan amounts.
+     * @param priceAddress Address of the Chainlink price feed for the token.
+     * @return int The USD value of the token amount based on the latest price feed data.
+     */
     function usdConverter(address priceAddress) public view returns (int) {
         (, int answer, , , ) = AggregatorV3Interface(priceAddress)
             .latestRoundData();
         return answer;
     }
 
-    // Token Checker
-    // Checks if the token address is in the address array that we put as arguments
+    /**
+     * @notice Checks if a new token is not already tracked by the user's token array.
+     * @dev Utility function to prevent duplicate entries in user token arrays.
+     * @param userTokens Array of token addresses the user has interacted with.
+     * @param token Address of the token to check.
+     * @return bool True if the token is not in the array, false otherwise.
+     */
     function newTokenChecker(
         address[] memory userTokens,
         address token
@@ -359,6 +425,11 @@ contract LendingTracker {
         return newToken;
     }
 
+    /**
+     * @notice Claims yield for the user based on the tokens they have lent to the pool.
+     * @dev Calculates the yield based on the amount lent and the time passed, then transfers the yield to the user.
+     * @param tokenAddress The address of the token for which yield is being claimed.
+     */
     function getYield(address tokenAddress) public {
         uint256 yield = tokenToPool[tokenAddress].poolAddress.getYield(
             msg.sender,
@@ -370,6 +441,12 @@ contract LendingTracker {
         emit userFarmedYield(msg.sender, tokenAddress, yield);
     }
 
+    /**
+     * @notice Allows a user to return borrowed tokens along with any accrued interest.
+     * @dev Calculates interest based on the borrowing APY and time elapsed since the token was borrowed.
+     * @param id The unique identifier of the borrow receipt.
+     * @param tokenAmount The amount of the borrowed token being returned.
+     */
     function returnBorrowedToken(uint256 id, uint256 tokenAmount) public {
         if (borrowReceipts[msg.sender][id].amount == 0) {
             revert lendingTracker_receiptDoesntExist();

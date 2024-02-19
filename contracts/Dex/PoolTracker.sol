@@ -2,23 +2,27 @@
 
 pragma solidity ^0.8.9;
 
+// Importing necessary contracts and interfaces
 import "./LiquidityPool.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-// Errors
+// Custom error definitions for specific failure conditions
 error PoolTracker_noTokensDetected();
 error PoolTracker_pairAlreadyExists();
 error PoolTracker_addressNotAllowed();
 
-// To do:
-// Timer: if the owner doesnt deploy initial liquidity in one day the
-// liquidity pool gets untracked, is not part of platform anymore
+/**
+ * @title PoolTracker
+ * @dev Manages the creation and tracking of liquidity pools within a decentralized finance ecosystem.
+ * Utilizes Chainlink for accurate price feeds and OpenZeppelin's ERC20 for token interactions.
+ * Implements reentrancy guards to mitigate potential security vulnerabilities in contract interactions.
+ */
 contract PoolTracker {
-    // PoolTracker Owner
+    // The owner of the PoolTracker contract, set to the deployer.
     address owner;
 
-    // Constructor, sets the owner
+    // Constructor: Sets the contract deployer as the owner.
     constructor() {
         owner = msg.sender;
     }
@@ -51,7 +55,20 @@ contract PoolTracker {
     // Mapping of pool per Owner
     mapping(address => LiquidityPool[]) public poolOwner;
 
-    // Pool creator, approve enough for two transferfroms(one to contract(by msg sender) and one from contract(by contract))
+    /**
+     * @dev Creates a liquidity pool for a given pair of ERC20 tokens. This function handles the initial
+     * transfer of token amounts from the caller, sets up the liquidity pool, and updates internal mappings.
+     * Emits a PoolCreated event upon successful creation.
+     *
+     * Requirements:
+     * - The token pair must not already have an existing pool.
+     * - The caller must have approved the contract to spend the necessary token amounts.
+     *
+     * @param _assetOneAddress The address of the first token in the pair.
+     * @param _assetTwoAddress The address of the second token in the pair.
+     * @param amountOne The amount of the first token to add to the pool.
+     * @param amountTwo The amount of the second token to add to the pool.
+     */
     function createPool(
         address _assetOneAddress,
         address _assetTwoAddress,
@@ -92,7 +109,6 @@ contract PoolTracker {
         pairToPool[_assetOneAddress][_assetTwoAddress] = poolAddress;
         pairToPool[_assetTwoAddress][_assetOneAddress] = poolAddress;
 
-        // tokens.push()
         if (tokenExists(_assetOneAddress) == false) {
             tokens.push(_assetOneAddress);
         }
@@ -103,7 +119,13 @@ contract PoolTracker {
         emit poolCreated(poolAddress, _assetOneAddress, _assetTwoAddress);
     }
 
-    // To check if a pool pair exists
+    /**
+     * @dev Checks if a liquidity pool exists for a given pair of tokens.
+     *
+     * @param token1 The address of the first token.
+     * @param token2 The address of the second token.
+     * @return bool Returns true if the pool exists, false otherwise.
+     */
     function exists(address token1, address token2) public view returns (bool) {
         bool exist;
         for (uint256 i; i < poolPairs[token1].length; i++) {
@@ -114,6 +136,12 @@ contract PoolTracker {
         return exist;
     }
 
+    /**
+     * @dev Checks if a token is already tracked by the contract.
+     *
+     * @param tokenAddress The address of the token to check.
+     * @return bool Returns true if the token is tracked, false otherwise.
+     */
     function tokenExists(address tokenAddress) public view returns (bool) {
         bool exist;
         for (uint256 i; i < tokens.length; i++) {
@@ -134,7 +162,13 @@ contract PoolTracker {
     // Array of routing Tokens
     routingAddress[] public routingAddresses;
 
-    //
+    /**
+     * @dev Allows the contract owner to add or update the routing address for a token.
+     * This is used for token swaps and price feed lookups.
+     *
+     * @param tokenAddress The token for which to set the routing.
+     * @param priceFeed The Chainlink price feed address for the token.
+     */
     function addRoutingAddress(address tokenAddress, address priceFeed) public {
         if (msg.sender != owner) {
             revert PoolTracker_addressNotAllowed();
@@ -147,10 +181,9 @@ contract PoolTracker {
                     routingAddresses[i] = routingAddress(
                         tokenAddress,
                         priceFeed
-                    ); // In case we want to update priceFeed address of existing token
+                    );
                     break;
                 } else if (i == routingAddresses.length - 1) {
-                    // If it is the last one and isnt the same
                     routingAddresses.push(
                         routingAddress(tokenAddress, priceFeed)
                     );
@@ -159,6 +192,14 @@ contract PoolTracker {
         }
     }
 
+    /**
+     * @dev Determines the optimal routing token for a swap between two tokens,
+     * based on available liquidity and price feeds.
+     *
+     * @param address1 The address of the first token.
+     * @param address2 The address of the second token.
+     * @return address The address of the optimal routing token.
+     */
     function tokenToRoute(
         address address1,
         address address2
@@ -196,7 +237,7 @@ contract PoolTracker {
                                 (int(balance1) + int(balance2)) *
                                 answer;
                             if (liquidity > routingTokenLiquidity) {
-                                // Best choice so far if the liquidty is bigger than previous best token
+                                // Best choice so far if the liquidity is bigger than previous best token
                                 routingToken = routingAddresses[b].tokenAddress;
                                 routingTokenLiquidity = liquidity;
                             }
