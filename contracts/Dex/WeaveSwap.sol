@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // Error declaration for unswappable token pairs
 error SwapRouter_tokensCantBeSwapped();
+error SwapRouter_needToCallExistingFunction();
 
 /**
  * @title SwapRouter
@@ -60,7 +61,7 @@ contract SwapRouter {
         address address1,
         address address2,
         uint256 inputAmount
-    ) public noReentrancy {
+    ) public payable noReentrancy {
         if (poolTracker.exists(address1, address2)) {
             // Direct swap scenario
             LiquidityPool pool = poolTracker.pairToPool(address1, address2);
@@ -74,7 +75,7 @@ contract SwapRouter {
                     inputAmount
                 );
                 IERC20(address1).approve(address(pool), inputAmount);
-                pool.sellAssetOne(inputAmount);
+                pool.sellAssetOne{value: pool.swapFee()}(inputAmount);
             } else {
                 IERC20(address1).transferFrom(
                     msg.sender,
@@ -82,7 +83,7 @@ contract SwapRouter {
                     inputAmount
                 );
                 IERC20(address1).approve(address(pool), inputAmount);
-                pool.sellAssetTwo(inputAmount);
+                pool.sellAssetTwo{value: pool.swapFee()}(inputAmount);
             }
             uint256 amountOutput = IERC20(address2).balanceOf(address(this)) -
                 startingBalanceAddress2;
@@ -112,7 +113,7 @@ contract SwapRouter {
                     inputAmount
                 );
                 IERC20(address1).approve(address(pool1), inputAmount);
-                pool1.sellAssetOne(inputAmount);
+                pool1.sellAssetOne{value: pool1.swapFee()}(inputAmount);
             } else {
                 IERC20(address1).transferFrom(
                     msg.sender,
@@ -120,7 +121,7 @@ contract SwapRouter {
                     inputAmount
                 );
                 IERC20(address1).approve(address(pool1), inputAmount);
-                pool1.sellAssetTwo(inputAmount);
+                pool1.sellAssetTwo{value: pool1.swapFee()}(inputAmount);
             }
             //SWAP 2, routing token into output token
             uint256 routingTokenInput = IERC20(routingToken).balanceOf(
@@ -128,10 +129,10 @@ contract SwapRouter {
             ) - startingBalance;
             if (pool2.assetOneAddress() == address1) {
                 IERC20(routingToken).approve(address(pool2), routingTokenInput);
-                pool2.sellAssetOne(routingTokenInput);
+                pool2.sellAssetOne{value: pool2.swapFee()}(routingTokenInput);
             } else {
                 IERC20(routingToken).approve(address(pool2), routingTokenInput);
-                pool2.sellAssetTwo(routingTokenInput);
+                pool2.sellAssetTwo{value: pool2.swapFee()}(routingTokenInput);
             }
             uint256 address2Output = IERC20(address2).balanceOf(address(this)) -
                 startingBalance2;
@@ -180,4 +181,14 @@ contract SwapRouter {
         }
         return output;
     }
+
+    /**
+     * @dev Fallback function if address calls unexisting function, but contains msg.data
+     */
+    fallback() external payable {}
+
+    /**
+     * @dev Receive function if address calls unexisting function, without msg.data
+     */
+    receive() external payable {}
 }

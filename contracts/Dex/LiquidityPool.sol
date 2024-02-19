@@ -40,7 +40,7 @@ contract LiquidityPool {
     uint256 public initialLiquidity;
     uint256 public liquidity;
     uint256 public yield;
-    uint256 public swapFee;
+    uint256 public swapFee = 1000000000000000;
     address public owner;
 
     // Reentrancy Guard
@@ -223,7 +223,8 @@ contract LiquidityPool {
             _amount
         );
         IERC20(assetTwoAddress).transfer(msg.sender, result);
-        payable(msg.sender).transfer(unrequiredFee); // Sending back the unrequired fee
+        (bool sent, ) = payable(msg.sender).call{value: unrequiredFee}("");
+        require(sent, "Failed to send Ether");
         //EVENTS
         emit priceChanged(assetOneAddress, assetOnePrice());
         emit priceChanged(assetTwoAddress, assetTwoPrice());
@@ -257,7 +258,8 @@ contract LiquidityPool {
             _amount
         );
         IERC20(assetOneAddress).transfer(msg.sender, result);
-        payable(msg.sender).transfer(unrequiredFee); // Sending back the unrequired fee
+        (bool sent, ) = payable(msg.sender).call{value: unrequiredFee}("");
+        require(sent, "Failed to send Ether");
         //EVENTS
         emit priceChanged(assetOneAddress, assetOnePrice());
         emit priceChanged(assetTwoAddress, assetTwoPrice());

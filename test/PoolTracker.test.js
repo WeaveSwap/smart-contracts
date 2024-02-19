@@ -2,7 +2,14 @@ const { getNamedAccounts, deployments, ethers } = require("hardhat");
 const { expect } = require("chai");
 
 describe("Pool tracker test", () => {
-  let poolTracker, deployer, token1, token2, mintAmount, approveAmount, user;
+  let poolTracker,
+    deployer,
+    token1,
+    token2,
+    mintAmount,
+    approveAmount,
+    user,
+    swapRouter;
   beforeEach(async () => {
     mintAmount = ethers.parseEther("1000");
     approveAmount = ethers.parseEther("5000");
@@ -13,6 +20,7 @@ describe("Pool tracker test", () => {
     token1 = await ethers.getContract("TestToken1", deployer);
     token2 = await ethers.getContract("TestToken2", deployer);
     poolTracker = await ethers.getContract("PoolTracker", deployer);
+    swapRouter = await ethers.getContract("SwapRouter", deployer);
   });
   describe("Creates a pool", () => {
     it("adds Pool to mapping", async () => {
@@ -154,6 +162,27 @@ describe("Pool tracker test", () => {
       const userConnected = await poolTracker.connect(user);
       await expect(userConnected.addRoutingAddress(deployer, deployer)).to.be
         .reverted;
+    });
+  });
+  describe("Swap", () => {
+    it("Swaps between the test tokens", async () => {
+      await token1.approve(poolTracker.target, approveAmount);
+      await token2.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token1.target,
+        token2.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      // console.log(`Swap fee ${await poolContract.swapFee()}`);
+      await token1.approve(swapRouter.target, ethers.parseEther("10"));
+      const gas = ethers.parseEther("10");
+      await await swapRouter.swapAsset(
+        token1.target,
+        token2.target,
+        ethers.parseEther("10"),
+        { value: gas }
+      );
     });
   });
 });

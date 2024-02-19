@@ -4,18 +4,14 @@ async function deployPool() {
   console.log("Connecting to the contracts...");
   const { deployer } = await getNamedAccounts();
   const accounts = await ethers.getSigners();
-  console.log(accounts[0]);
-  console.log(deployer);
-  // const poolTracker = await ethers.getContract(
-  //   "PoolTracker",
-  //   "0x1044E8b79B873f09Dc2c0665532c267D470c8E0c",
-  //   accounts[0].address
-  // );
+  // console.log(accounts[0]);
+  // console.log(deployer);
   const poolTracker = await ethers.getContract("PoolTracker", deployer);
   const token1 = await ethers.getContract("TestToken1", deployer);
   const token2 = await ethers.getContract("TestToken2", deployer);
-  console.log(token1.target);
-  console.log(token2.target);
+  console.log(`This is the pool tracker address ${poolTracker.target}`);
+  console.log(`This is the token1 address ${token1.target}`);
+  console.log(`This is the token2 address ${token2.target}`);
   console.log("Connected to the contract!");
 
   console.log("Deploying the pool...");
