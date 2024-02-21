@@ -6,11 +6,18 @@ module.exports = async () => {
   const { deployer } = await getNamedAccounts();
   const { deploy, log } = deployments;
 
-  args = [];
+  log("Getting the addresses of tokens...");
+  //GET THE TOKENS AND ADDRESSES
+  const simpleToken = await ethers.getContract("TestToken1", deployer);
+  const sampleToken = await ethers.getContract("TestToken2", deployer);
+  const simpleTokenAddress = simpleToken.target;
+  const sampleTokenAddress = sampleToken.target;
+
+  args = [simpleTokenAddress, sampleTokenAddress];
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
   log("Deploying...");
-  const lendingTracker = await deploy("LendingTracker", {
+  const liquidityPool = await deploy("LiquidityPool", {
     log: true,
     from: deployer,
     waitConfirmations: blockConfirmations,
@@ -21,11 +28,11 @@ module.exports = async () => {
   if (!developmentChains.includes(network.name)) {
     log("Verifying...");
     await verify(
-      lendingTracker.address,
+      liquidityPool.address,
       args,
-      "contracts/Lending/LendingTracker.sol:LendingTracker"
+      "contracts/LiquidityPool.sol:LiquidityPool"
     );
   }
 };
 
-module.exports.tags = ["all", "lendingTracker", "tracker"];
+module.exports.tags = ["all", "liquidityPool", "pool"];

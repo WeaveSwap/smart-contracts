@@ -16,13 +16,14 @@ const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL || "";
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL || "";
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
+const BSCTEST_RPC_URL = process.env.BSCTEST_RPC_URL || "";
+const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "";
 
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       chainId: 31337,
-      // gasPrice: 130000000000,
     },
     localhost: {
       chainId: 31337,
@@ -46,6 +47,12 @@ module.exports = {
       chainId: 43113,
       blockConfirmations: 6,
     },
+    bscTestnet: {
+      url: BSCTEST_RPC_URL,
+      accounts: [PRIVATE_KEY],
+      chaindId: 97,
+      blockConfirmations: 6,
+    },
   },
   solidity: {
     compilers: [
@@ -55,10 +62,17 @@ module.exports = {
       {
         version: "0.4.24",
       },
+      {
+        version: "0.8.7",
+      },
     ],
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: ETHERSCAN_API_KEY,
+      sepolia: ETHERSCAN_API_KEY,
+      bscTestnet: BSCSCAN_API_KEY,
+    },
   },
   gasReporter: {
     enabled: true,

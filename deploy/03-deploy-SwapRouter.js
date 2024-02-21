@@ -22,7 +22,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   log("The contract has been deployed!");
 
   if (
-    process.env.ETHERSCAN_API_KEY &&
     !developmentChains.includes(network.name)
   ) {
     await verify(
@@ -33,4 +32,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   }
 };
 
-module.exports.tags = ["SwapRouter", "WeaveSwap", "all"];
+module.exports.tags = ["SwapRouter", "WeaveSwap", "all", "dex"];

@@ -1,5 +1,6 @@
 const { getNamedAccounts, deployments, ethers } = require("hardhat");
 const { expect } = require("chai");
+const { INITIAL_ANSWER } = require("../helper-hardhat-config");
 
 describe("Pool tracker test", () => {
   let poolTracker,
@@ -9,18 +10,22 @@ describe("Pool tracker test", () => {
     mintAmount,
     approveAmount,
     user,
-    swapRouter;
+    swapRouter,
+    priceAggregator,
+    token3;
   beforeEach(async () => {
     mintAmount = ethers.parseEther("1000");
-    approveAmount = ethers.parseEther("5000");
+    approveAmount = ethers.parseEther("1000");
     await deployments.fixture(["all", "tokens"]);
     const accounts = await ethers.getSigners();
     user = accounts[1];
     deployer = (await getNamedAccounts()).deployer;
     token1 = await ethers.getContract("TestToken1", deployer);
     token2 = await ethers.getContract("TestToken2", deployer);
+    token3 = await ethers.getContract("TestToken3", deployer);
     poolTracker = await ethers.getContract("PoolTracker", deployer);
     swapRouter = await ethers.getContract("SwapRouter", deployer);
+    priceAggregator = await ethers.getContract("MockV3Aggregator", deployer);
   });
   describe("Creates a pool", () => {
     it("adds Pool to mapping", async () => {
@@ -112,6 +117,9 @@ describe("Pool tracker test", () => {
       expect(
         await poolTracker.pairToPool(token2.target, token1.target)
       ).to.equal(poolAddress);
+      expect((await poolTracker.tokenList())[0]).to.equal(token1.target);
+      expect((await poolTracker.tokenList())[1]).to.equal(token2.target);
+      expect((await poolTracker.tokenList()).length).to.equal(2);
     });
     it("Revert if pool pair exists", async () => {
       await token1.approve(poolTracker.target, approveAmount);
@@ -165,7 +173,7 @@ describe("Pool tracker test", () => {
     });
   });
   describe("Swap", () => {
-    it("Swaps between the test tokens", async () => {
+    it("Swaps directly between the test tokens", async () => {
       await token1.approve(poolTracker.target, approveAmount);
       await token2.approve(poolTracker.target, approveAmount);
       await poolTracker.createPool(
@@ -183,6 +191,221 @@ describe("Pool tracker test", () => {
         ethers.parseEther("10"),
         { value: gas }
       );
+    });
+    it("Checks mocks", async () => {
+      expect((await priceAggregator.latestRoundData()).answer).to.equal(
+        INITIAL_ANSWER
+      );
+    });
+    it("Routes the best option", async () => {
+      await token1.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token1.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await token2.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token2.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await poolTracker.addRoutingAddress(
+        token3.target,
+        priceAggregator.target
+      );
+      expect((await poolTracker.routingAddresses(0)).tokenAddress).to.equal(
+        token3.target
+      );
+      expect((await poolTracker.routingAddresses(0)).priceFeed).to.equal(
+        priceAggregator.target
+      );
+      expect(
+        await poolTracker.tokenToRoute(token2.target, token1.target)
+      ).to.equal(token3.target);
+      expect(
+        await poolTracker.tokenToRoute(token1.target, token2.target)
+      ).to.equal(token3.target);
+      expect(
+        await poolTracker.tokenToRoute(token3.target, token1.target)
+      ).to.equal("0x0000000000000000000000000000000000000000");
+      await expect(poolTracker.tokenToRoute(token1.target, token1.target)).to.be
+        .reverted;
+    });
+    it("Gets the routing price", async () => {
+      await token1.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token1.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await token2.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token2.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await poolTracker.addRoutingAddress(
+        token3.target,
+        priceAggregator.target
+      );
+      expect((await poolTracker.routingAddresses(0)).tokenAddress).to.equal(
+        token3.target
+      );
+      expect((await poolTracker.routingAddresses(0)).priceFeed).to.equal(
+        priceAggregator.target
+      );
+      //Direct swap
+      const pool13 = await poolTracker.pairToPool(token1.target, token3.target);
+      const pool13Contract = await ethers.getContractAt(
+        "LiquidityPool",
+        pool13
+      );
+      async function returnPrice(token, poolContract, inputAmount) {
+        const price = await poolContract.getSwapQuantity(
+          token.target,
+          inputAmount
+        );
+        return price;
+      }
+      expect(
+        await swapRouter.getSwapAmount(
+          token1.target,
+          token3.target,
+          ethers.parseEther("1")
+        )
+      ).to.equal(
+        await returnPrice(token1, pool13Contract, ethers.parseEther("1"))
+      );
+      const pool23 = await poolTracker.pairToPool(token2.target, token3.target);
+      const pool23Contract = await ethers.getContractAt(
+        "LiquidityPool",
+        pool23
+      );
+      expect(
+        await swapRouter.getSwapAmount(
+          token2.target,
+          token3.target,
+          ethers.parseEther("1")
+        )
+      ).to.equal(
+        await returnPrice(token2, pool23Contract, ethers.parseEther("1"))
+      );
+      // Routing through token3
+      const price12 = await returnPrice(
+        token3,
+        pool23Contract,
+        await returnPrice(token1, pool13Contract, ethers.parseEther("1"))
+      );
+      expect(
+        await swapRouter.getSwapAmount(
+          token1.target,
+          token2.target,
+          ethers.parseEther("1")
+        )
+      ).to.equal(price12);
+    });
+    it("Swaps indirectly between the test tokens", async () => {
+      await token1.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token1.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await token2.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token2.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await poolTracker.addRoutingAddress(
+        token3.target,
+        priceAggregator.target
+      );
+      expect((await poolTracker.routingAddresses(0)).tokenAddress).to.equal(
+        token3.target
+      );
+      expect((await poolTracker.routingAddresses(0)).priceFeed).to.equal(
+        priceAggregator.target
+      );
+      //Indirect swap
+      async function getBalance(token) {
+        const balance = await token.balanceOf(deployer);
+        return balance;
+      }
+      //Balances before the swap
+      expect(await getBalance(token1)).to.equal(ethers.parseEther("950"));
+      expect(await getBalance(token2)).to.equal(ethers.parseEther("950"));
+      expect(await getBalance(token3)).to.equal(ethers.parseEther("900"));
+      const swap1Output = await swapRouter.getSwapAmount(
+        token1.target,
+        token3.target,
+        ethers.parseEther("1")
+      );
+      const swap2Output = await swapRouter.getSwapAmount(
+        token1.target,
+        token3.target,
+        swap1Output
+      );
+      await token1.approve(swapRouter.target, ethers.parseEther("1"));
+      await swapRouter.swapAsset(
+        token1.target,
+        token2.target,
+        ethers.parseEther("1"),
+        { value: ethers.parseEther("1") }
+      );
+      //Balances after the swap
+      expect(await getBalance(token1)).to.equal(
+        ethers.parseEther("950") - ethers.parseEther("1")
+      );
+      expect(await getBalance(token2)).to.equal(
+        ethers.parseEther("950") + swap2Output
+      );
+      expect(await getBalance(token3)).to.equal(ethers.parseEther("900"));
+      expect(await token1.balanceOf(token1)).to.equal("0");
+      expect(await token2.balanceOf(token2)).to.equal("0");
+      expect(await token3.balanceOf(token3)).to.equal("0");
+      //Pool balances
+      const pool13 = await poolTracker.pairToPool(token1.target, token3.target);
+      const pool23 = await poolTracker.pairToPool(token2.target, token3.target);
+
+      expect(await token1.balanceOf(pool13)).to.equal(ethers.parseEther("51"));
+      expect(await token3.balanceOf(pool13)).to.equal(
+        ethers.parseEther("50") - swap1Output
+      );
+      expect(await token3.balanceOf(pool23)).to.equal(
+        ethers.parseEther("50") + swap1Output
+      );
+      expect(await token2.balanceOf(pool23)).to.equal(
+        ethers.parseEther("50") - swap2Output
+      );
+      // Reverts if user wants to trade same token
+      await expect(
+        swapRouter.swapAsset(
+          token1.target,
+          token1.target,
+          ethers.parseEther("1")
+        )
+      ).to.be.reverted;
+      await expect(
+        swapRouter.getSwapAmount(
+          token1.target,
+          token1.target,
+          ethers.parseEther("1")
+        )
+      ).to.be.reverted;
     });
   });
 });

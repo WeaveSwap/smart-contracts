@@ -88,6 +88,10 @@ contract SwapRouter {
             uint256 amountOutput = IERC20(address2).balanceOf(address(this)) -
                 startingBalanceAddress2;
             IERC20(address2).transfer(msg.sender, amountOutput);
+            // Unrequired fee
+            uint256 unrequiredFee = msg.value - pool.swapFee(); // In case the msg.sender sent more value than it is required
+            (bool sent, ) = payable(msg.sender).call{value: unrequiredFee}("");
+            require(sent, "Failed to send Ether");
         } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
             // Routed swap scenario
             address routingToken = poolTracker.tokenToRoute(address1, address2);
@@ -137,6 +141,12 @@ contract SwapRouter {
             uint256 address2Output = IERC20(address2).balanceOf(address(this)) -
                 startingBalance2;
             IERC20(address2).transfer(msg.sender, address2Output);
+            // Unrequired fee
+            uint256 unrequiredFee = msg.value -
+                pool1.swapFee() -
+                pool2.swapFee(); // In case the msg.sender sent more value than it is required
+            (bool sent, ) = payable(msg.sender).call{value: unrequiredFee}("");
+            require(sent, "Failed to send Ether");
         } else {
             // Assets cant be swapped directly nor routed
             revert SwapRouter_tokensCantBeSwapped();

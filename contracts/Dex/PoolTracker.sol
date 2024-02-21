@@ -11,6 +11,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 error PoolTracker_noTokensDetected();
 error PoolTracker_pairAlreadyExists();
 error PoolTracker_addressNotAllowed();
+error PoolTracker_cantSwapSameToken();
 
 /**
  * @title PoolTracker
@@ -204,6 +205,9 @@ contract PoolTracker {
         address address1,
         address address2
     ) public view returns (address) {
+        if (address1 == address2) {
+            revert PoolTracker_cantSwapSameToken();
+        }
         address[] memory token1pairs = poolPairs[address1];
         address[] memory token2pairs = poolPairs[address2];
 
@@ -247,5 +251,14 @@ contract PoolTracker {
             }
         }
         return routingToken;
+    }
+
+    /**
+     * @dev Returns all array of all tradable tokens on the platform
+     *
+     * @return array Returns tokens array.
+     */
+    function tokenList() public view returns (address[] memory) {
+        return tokens;
     }
 }

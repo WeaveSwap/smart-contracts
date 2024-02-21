@@ -37,17 +37,18 @@ async function swapTokens() {
   );
   console.log(`This is the price before! ${priceBefore}`);
   console.log("Swapping...");
-  await swapRouter.swapAsset(
+  const tx = await swapRouter.swapAsset(
     token1.target,
     token2.target,
-    ethers.parseEther("1")
+    ethers.parseEther("1"),
+    { value: ethers.parseEther("0.02") }
   );
+  await tx.wait();
   console.log("Swap successful!");
   const priceAfter = await swapRouter.getSwapAmount(
     token1.target,
     token2.target,
-    ethers.parseEther("1"),
-    { value: ethers.parseEther("1") }
+    ethers.parseEther("1")
   );
   console.log(`This is the price after! ${priceAfter}`);
   console.log(

@@ -1,12 +1,5 @@
-const {
-  developmentChains,
-} = require("../helper-hardhat-config");
-const {
-  network,
-  getNamedAccounts,
-  deployments,
-  getChainId,
-} = require("hardhat");
+const { developmentChains } = require("../helper-hardhat-config");
+const { network, getNamedAccounts, deployments } = require("hardhat");
 const { verify } = require("../utils/verify");
 
 module.exports = async () => {
@@ -27,10 +20,7 @@ module.exports = async () => {
   });
   log("Deployed!!!");
 
-  if (
-    process.env.ETHERSCAN_API_KEY &&
-    !developmentChains.includes(network.name)
-  ) {
+  if (!developmentChains.includes(network.name)) {
     log("Verifying...");
     await verify(
       lendingTracker.address,
