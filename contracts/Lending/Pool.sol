@@ -17,7 +17,7 @@ error lending_notEnoughTimePassed();
  * This contract allows tokens to be lent out and borrowed, tracks yield farming activities,
  * and allows for the accumulation and withdrawal of yield based on predefined APY.
  */
-contract Lending {
+contract Pool {
     // The ERC20 token used for lending and borrowing.
     IERC20 public token;
 
@@ -145,5 +145,10 @@ contract Lending {
         yieldTaken[msg.sender] += availableYield;
         farmedYield += availableYield;
         return availableYield;
+    }
+
+    // To book how much yield came to the contract
+    function bookYield(uint256 _yield) public onlyOwner {
+        yield += _yield;
     }
 }

@@ -12,7 +12,7 @@ module.exports = async () => {
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
   log("Deploying...");
-  const lendingPool = await deploy("Lending", {
+  const pool = await deploy("Pool", {
     log: true,
     from: deployer,
     waitConfirmations: blockConfirmations,
@@ -22,11 +22,7 @@ module.exports = async () => {
 
   if (!developmentChains.includes(network.name)) {
     log("Verifying...");
-    await verify(
-      lendingTracker.address,
-      args,
-      "contracts/Lending/LendingTracker.sol:LendingTracker"
-    );
+    await verify(pool.address, args, "contracts/Lending/pool.sol:pool");
   }
 };
 

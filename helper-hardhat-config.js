@@ -11,6 +11,9 @@ const networkConfig = {
   31337: {
     name: "localhost",
   },
+  97: {
+    name: "bscTestnet",
+  },
   mocha: {
     timeout: 200000,
   },

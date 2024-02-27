@@ -2,7 +2,13 @@ const { getNamedAccounts, ethers } = require("hardhat");
 const { assert, expect } = require("chai");
 
 describe("LendingAndBorrowingTest", () => {
-  let deployer, simpleToken, lendingTracker, lendingPool, user, mintAmount;
+  let deployer,
+    simpleToken,
+    lendingTracker,
+    lendingPool,
+    user,
+    mintAmount,
+    priceAggregator;
   beforeEach("", async () => {
     //GET THE ACCOUNTS AND SET VARIABLES
     mintAmount = ethers.parseEther("1000");
@@ -15,6 +21,7 @@ describe("LendingAndBorrowingTest", () => {
     simpleToken = await ethers.getContract("TestToken1", deployer);
     lendingPool = await ethers.getContract("Lending", deployer);
     lendingTracker = await ethers.getContract("LendingTracker", deployer);
+    priceAggregator = await ethers.getContract("MockV3Aggregator", deployer);
   });
   describe("Token part", () => {
     it("Mints the tokens", async () => {
