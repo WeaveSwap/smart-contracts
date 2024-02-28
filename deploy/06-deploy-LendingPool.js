@@ -7,8 +7,9 @@ module.exports = async () => {
   const { deploy, log } = deployments;
 
   const token1 = await ethers.getContract("TestToken1", deployer);
+  const borrowingPool = await ethers.getContract("BorrowingTracker", deployer);
 
-  args = [token1.target];
+  args = [token1.target, borrowingPool.target];
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
   log("Deploying...");
