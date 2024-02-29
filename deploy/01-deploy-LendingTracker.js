@@ -28,4 +28,4 @@ module.exports = async () => {
   }
 };
 
-module.exports.tags = ["all", "lendingTracker", "tracker"];
+module.exports.tags = ["all", "lendingTracker", "tracker", "lending"];

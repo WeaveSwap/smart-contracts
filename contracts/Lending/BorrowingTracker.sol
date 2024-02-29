@@ -45,17 +45,17 @@ contract BorrowingTracker {
     event collateralTerminated(address user, address terminator);
 
     // Maximum Loan-to-Value (LTV) ratio for borrowing against collateral
-    int256 ltv = 75;
+    int256 public ltv = 75;
 
     // Owner of the contract, set at deployment
     address owner;
 
     // SwapRouter
-    SwapRouter swapRouter;
-    address swapToken; // We will take usdc
+    SwapRouter public swapRouter;
+    address public swapToken; // We will take usdc
 
     // Lendingtracker
-    LendingTracker lendingTracker;
+    LendingTracker public lendingTracker;
 
     // Constructor sets the deploying address as the owner
     constructor(address _lendingTracker, address _swapRouter) {
@@ -517,6 +517,49 @@ contract BorrowingTracker {
     // This is for termination purposes
     function addSwapToken(address newSwapToken) public {
         swapToken = newSwapToken;
+    }
+
+    function getBorrowedTokens(
+        address user
+    ) public view returns (address[] memory) {
+        return borrowedTokens[user];
+    }
+
+    function getCollateralTokens(
+        address user
+    ) public view returns (address[] memory) {
+        return collateralTokens[user];
+    }
+
+    function getBorrowedReceipts(
+        address user
+    ) public view returns (uint256[] memory) {
+        // First pass: Calculate the total size needed for the memory array
+        uint256 totalSize = 0;
+        for (uint256 i = 0; i < borrowedTokens[user].length; i++) {
+            totalSize += userBorrowReceipts[user][borrowedTokens[user][i]]
+                .length;
+        }
+
+        // Allocate the memory array with the total size
+        uint256[] memory allBorrowedReceipts = new uint256[](totalSize);
+
+        // Second pass: Populate the memory array
+        uint256 currentIndex = 0;
+        for (uint256 i = 0; i < borrowedTokens[user].length; i++) {
+            for (
+                uint256 c = 0;
+                c < userBorrowReceipts[user][borrowedTokens[user][i]].length;
+                c++
+            ) {
+                allBorrowedReceipts[currentIndex] = userBorrowReceipts[user][
+                    borrowedTokens[user][i]
+                ][c];
+                currentIndex++;
+            }
+        }
+
+        return allBorrowedReceipts;
     }
 }
 

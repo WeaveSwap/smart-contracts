@@ -42,7 +42,7 @@ contract LendingTracker {
     address owner;
 
     // Borrowing contract
-    address borrowingContract;
+    address public borrowingContract;
 
     // Constructor sets the deploying address as the owner
     constructor() {
@@ -180,6 +180,18 @@ contract LendingTracker {
         // Transfer tokens to user
         IERC20(tokenAddress).transfer(msg.sender, tokenAmount);
 
+        // // Pop the lended token from the array
+        if (userLendedAmount[msg.sender][tokenAddress] == 0) {
+            for (uint256 i; i < userLendedTokens[msg.sender].length; i++) {
+                if (userLendedTokens[msg.sender][i] == tokenAddress) {
+                    userLendedTokens[msg.sender][i] ==
+                        userLendedTokens[msg.sender][
+                            userLendedTokens[msg.sender].length - 1
+                        ];
+                    userLendedTokens[msg.sender].pop();
+                }
+            }
+        }
         // Event
         emit userWithdrawnLendedTokens(msg.sender, tokenAddress, tokenAmount);
     }
@@ -226,6 +238,13 @@ contract LendingTracker {
 
     function addBorrowingContract(address newBorrowingContract) public {
         borrowingContract = newBorrowingContract;
+    }
+
+    // Get all loaned tokens based on user
+    function getLoanedTokens(
+        address user
+    ) public view returns (address[] memory) {
+        return userLendedTokens[user];
     }
 }
 

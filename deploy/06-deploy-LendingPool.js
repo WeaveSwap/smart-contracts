@@ -23,8 +23,8 @@ module.exports = async () => {
 
   if (!developmentChains.includes(network.name)) {
     log("Verifying...");
-    await verify(pool.address, args, "contracts/Lending/pool.sol:pool");
+    await verify(pool.address, args, "contracts/Lending/Pool.sol:Pool");
   }
 };
 
-module.exports.tags = ["Lending", "Lendingpool"];
+module.exports.tags = ["lending", "Lendingpool"];
