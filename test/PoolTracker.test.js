@@ -407,5 +407,51 @@ describe("Pool tracker test", () => {
         )
       ).to.be.reverted;
     });
+    it("Gets the swap correct swapFee", async () => {
+      await token1.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token1.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await token2.approve(poolTracker.target, approveAmount);
+      await token3.approve(poolTracker.target, approveAmount);
+      await poolTracker.createPool(
+        token2.target,
+        token3.target,
+        ethers.parseEther("50"),
+        ethers.parseEther("50")
+      );
+      await poolTracker.addRoutingAddress(
+        token3.target,
+        priceAggregator.target
+      );
+      expect(
+        await swapRouter.getSwapFee(token1.target, token2.target)
+      ).to.equal(ethers.parseEther("0.002"));
+      expect(
+        await swapRouter.getSwapFee(token1.target, token3.target)
+      ).to.equal(ethers.parseEther("0.001"));
+      await token1.approve(swapRouter.target, ethers.parseEther("1"));
+      const fee = await swapRouter.getSwapFee(token1.target, token2.target);
+      const fee2 = await swapRouter.getSwapFee(token2.target, token3.target);
+      await swapRouter.swapAsset(
+        token1.target,
+        token2.target,
+        ethers.parseEther("1"),
+        { value: fee }
+      );
+      await token1.approve(swapRouter.target, ethers.parseEther("1"));
+      await expect(
+        swapRouter.swapAsset(
+          token1.target,
+          token2.target,
+          ethers.parseEther("1"),
+          { value: fee2 }
+        )
+      ).to.be.reverted;
+    });
   });
 });

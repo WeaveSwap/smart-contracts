@@ -3,6 +3,8 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "../Router/InterfaceBridge.sol";
+import "./PoolTracker.sol";
 
 error assetNotCorrect();
 error notEnoughTokens();
@@ -17,7 +19,7 @@ error needToCallExistingFunction();
  * @title LiquidityPool
  * @dev A decentralized liquidity pool contract for swapping assets and providing liquidity.
  */
-contract LiquidityPool {
+contract LiquidityPool is IZKBridgeReceiver {
     // Events
     event priceChanged(address _asset, uint256 price);
     event liquidityAdded(
@@ -321,22 +323,6 @@ contract LiquidityPool {
     }
 
     /**
-     * @dev Function to get the total liquidity in the pool.
-     * @return The total liquidity in the pool.
-     */
-    function getLiquidity() public view returns (uint256) {
-        return liquidity;
-    }
-
-    /**
-     * @dev Function to get the current swap fee percentage.
-     * @return The current swap fee percentage.
-     */
-    function getSwapFee() public view returns (uint256) {
-        return swapFee;
-    }
-
-    /**
      * @dev Function to get the current ETH balance of the contract.
      * @return The current ETH balance of the contract.
      */
@@ -394,31 +380,46 @@ contract LiquidityPool {
     mapping(address => uint256) public yieldTaken;
 
     /**
-     * @dev Function to get the current yield amount available in the pool.
-     * @return The current yield amount.
-     */
-    function yieldAmount() public view returns (uint256) {
-        return yield;
-    }
-
-    /**
      * @dev Function to allow users to claim their yield. Can be called once a day.
      */
-    function getYield() public {
+    function getYield() public payable {
         if (isTime() == false) {
             revert notEnoughTimePassed();
         }
-        lastYieldFarmedTime[msg.sender] = block.timestamp; // Reentrancy guard
-        uint256 yieldSoFar = yieldTaken[msg.sender];
-        uint256 userLiquidity = (lpTokenQuantity[msg.sender] * 100) / liquidity;
-        uint256 availableYield = ((yield -
-            ((yieldSoFar * 100) / userLiquidity)) * userLiquidity) / 100;
+        //NOW SEND BACK THE AVAILABLE YIELD
+        uint16 destinationChain = PoolTracker(owner).destinationChain();
+        IZKBridge zkBridge = PoolTracker(owner).zkBridge();
+        address yieldCalculator = PoolTracker(owner).yieldCalculator();
+        bytes memory newPayload = abi.encode(msg.sender);
+        uint256 fee = zkBridge.estimateFee(destinationChain);
+        zkBridge.send{value: fee}(
+            destinationChain,
+            yieldCalculator,
+            newPayload
+        );
+        // Pay this to our contract which will fund the bridge contract with tokens
+        uint256 bridgeFee = zkBridge.estimateFee(destinationChain);
+        (bool sent, ) = payable(owner).call{value: bridgeFee}("");
+        require(sent, "Failed to send Ether");
+    }
+
+    function zkReceive(
+        uint16 srcChainId,
+        address srcAddress,
+        uint64 nonce,
+        bytes calldata payload
+    ) external {
+        (uint256 availableYield, address user) = abi.decode(
+            payload,
+            (uint256, address)
+        );
+        //TODO handle your business
         if (availableYield > address(this).balance) {
             revert notEnoughTokens(); // IN CASE THERE IS A LOT OF PEOPLE GETTING YIELD AT ONCE AND RATIOS GET CHANGED TOO MUCH
         }
-        yieldTaken[msg.sender] += availableYield;
-        payable(msg.sender).transfer(availableYield);
-
+        yieldTaken[user] += availableYield;
+        (bool sent, ) = payable(user).call{value: availableYield}("");
+        require(sent, "Failed to send Ether");
         // EMIT EVENT
         emit yieldFarmed(msg.sender, availableYield);
     }

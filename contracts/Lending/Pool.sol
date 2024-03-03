@@ -146,6 +146,7 @@ contract Pool {
         }
         yieldTaken[msg.sender] += availableYield;
         farmedYield += availableYield;
+        token.transfer(user, yield);
         return availableYield;
     }
 

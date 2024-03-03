@@ -226,8 +226,6 @@ contract LendingTracker {
             msg.sender,
             userLendedAmount[msg.sender][tokenAddress]
         );
-        IERC20(tokenAddress).transfer(msg.sender, yield);
-
         // Event
         emit userFarmedYield(msg.sender, tokenAddress, yield);
     }

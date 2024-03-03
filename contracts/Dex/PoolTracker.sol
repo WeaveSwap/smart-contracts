@@ -6,11 +6,10 @@ pragma solidity ^0.8.9;
 import "./LiquidityPool.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "../Router/InterfaceBridge.sol";
 
 // Custom error definitions for specific failure conditions
-error PoolTracker_noTokensDetected();
 error PoolTracker_pairAlreadyExists();
-error PoolTracker_addressNotAllowed();
 error PoolTracker_cantSwapSameToken();
 
 /**
@@ -30,6 +29,10 @@ contract PoolTracker {
 
     // Reentrancy Guard
     bool internal locked;
+    uint16 public destinationChain = 23; // Hard coded due to Size limit, OPBNB destination chain
+    IZKBridge public zkBridge =
+        IZKBridge(0xb20F0105f3598652a3bE569132F7b3F341106dDC); // Hard coded due to size limit
+    address public yieldCalculator;
 
     /**
      * @dev Modifier to prevent reentrancy attacks.
@@ -39,6 +42,13 @@ contract PoolTracker {
         locked = true;
         _;
         locked = false;
+    }
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert();
+        }
+        _;
     }
 
     // Tracker for created pools, will add to database
@@ -170,10 +180,10 @@ contract PoolTracker {
      * @param tokenAddress The token for which to set the routing.
      * @param priceFeed The Chainlink price feed address for the token.
      */
-    function addRoutingAddress(address tokenAddress, address priceFeed) public {
-        if (msg.sender != owner) {
-            revert PoolTracker_addressNotAllowed();
-        }
+    function addRoutingAddress(
+        address tokenAddress,
+        address priceFeed
+    ) public onlyOwner {
         if (routingAddresses.length == 0) {
             routingAddresses.push(routingAddress(tokenAddress, priceFeed));
         } else {
@@ -253,6 +263,10 @@ contract PoolTracker {
         return routingToken;
     }
 
+    function addYieldCalculator(address _yieldCalculator) public onlyOwner {
+        yieldCalculator = _yieldCalculator;
+    }
+
     /**
      * @dev Returns all array of all tradable tokens on the platform
      *
@@ -260,5 +274,15 @@ contract PoolTracker {
      */
     function tokenList() public view returns (address[] memory) {
         return tokens;
+    }
+
+    function getRoutingAddressesLength() public view returns (uint256) {
+        return routingAddresses.length;
+    }
+
+    function getPoolPairsLength(
+        address tokenAddress
+    ) public view returns (uint256) {
+        return poolPairs[tokenAddress].length;
     }
 }
