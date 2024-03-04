@@ -1,5 +1,5 @@
 const { developmentChains } = require("../helper-hardhat-config");
-const { network, getNamedAccounts, deployments } = require("hardhat");
+const { network, getNamedAccounts, deployments, ethers } = require("hardhat");
 const { verify } = require("../utils/verify");
 
 module.exports = async () => {
@@ -8,16 +8,14 @@ module.exports = async () => {
 
   log("Getting the addresses of tokens...");
   //GET THE TOKENS AND ADDRESSES
-  const simpleToken = await ethers.getContract("TestToken1", deployer);
-  const sampleToken = await ethers.getContract("TestToken2", deployer);
-  const simpleTokenAddress = simpleToken.target;
-  const sampleTokenAddress = sampleToken.target;
+  const ethPriceFeedAddress = "0x143db3CEEfbdfe5631aDD3E50f7614B6ba708BA7";
+  const poolTracker = await ethers.getContract("PoolTracker", deployer);
 
-  args = [simpleTokenAddress, sampleTokenAddress];
+  args = [poolTracker.target, ethPriceFeedAddress];
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
   log("Deploying...");
-  const liquidityPool = await deploy("LiquidityPool", {
+  const poolMetrics = await deploy("PoolMetrics", {
     log: true,
     from: deployer,
     waitConfirmations: blockConfirmations,
@@ -28,11 +26,11 @@ module.exports = async () => {
   if (!developmentChains.includes(network.name)) {
     log("Verifying...");
     await verify(
-      liquidityPool.address,
+      poolMetrics.address,
       args,
-      "contracts/Dex/LiquidityPool.sol:LiquidityPool"
+      "contracts/Dex/PoolMetrics.sol:PoolMetrics"
     );
   }
 };
 
-module.exports.tags = ["all", "liquidityPool", "pool"];
+module.exports.tags = ["all", "onChainMetrics", "poolMetrics", "bsc"];

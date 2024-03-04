@@ -2,10 +2,12 @@
 
 pragma solidity ^0.8.9;
 
+// Importing necessary contracts and interfaces
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "../Router/InterfaceBridge.sol";
 import "./PoolTracker.sol";
 
+// Custom errors for more descriptive and gas-efficient failure handling.
 error assetNotCorrect();
 error notEnoughTokens();
 error notEnoughGas();
@@ -17,7 +19,8 @@ error needToCallExistingFunction();
 
 /**
  * @title LiquidityPool
- * @dev A decentralized liquidity pool contract for swapping assets and providing liquidity.
+ * @notice Manages liquidity provision, asset swapping, and yield generation in a decentralized manner.
+ * @dev Implements IZKBridgeReceiver interface for cross-chain interactions and yield farming computations.
  */
 contract LiquidityPool is IZKBridgeReceiver {
     // Events
@@ -34,11 +37,9 @@ contract LiquidityPool is IZKBridgeReceiver {
     );
     event yieldFarmed(address indexed _address, uint256 _amount);
 
-    // Token Addresses
+    // State variables
     address public assetOneAddress;
     address public assetTwoAddress;
-
-    // Liquidity and Yield (fees)
     uint256 public initialLiquidity;
     uint256 public liquidity;
     uint256 public yield;
@@ -47,6 +48,16 @@ contract LiquidityPool is IZKBridgeReceiver {
 
     // Reentrancy Guard
     bool internal locked;
+
+    // TRACK THE LP TOKEN QUANTITY, INITIAL LIQUIDITY
+    mapping(address => uint256) public lpTokenQuantity;
+
+    // Daily yield tracking
+    mapping(address => uint256) public yieldTaken;
+
+    // Timestamp mapping for yield farming
+    mapping(address => uint256) public lastYieldFarmedTime;
+    mapping(address => uint256) public initialLiquidityProvidedTime;
 
     /**
      * @dev Modifier to prevent reentrancy attacks.
@@ -77,17 +88,6 @@ contract LiquidityPool is IZKBridgeReceiver {
         owner = msg.sender;
         swapFee = 1000000000000000; // 0.001 ether
     }
-
-    /**
-     * @dev Function to change the swap fee. Only callable by the owner.
-     * @param newSwapFee The new swap fee to set.
-     */
-    function changeSwapFee(uint256 newSwapFee) public onlyOwner {
-        swapFee = newSwapFee;
-    }
-
-    // TRACK THE LP TOKEN QUANTITY, INITIAL LIQUIDITY
-    mapping(address => uint256) public lpTokenQuantity;
 
     /**
      * @dev Function to add initial liquidity to the pool. Only callable by the owner.
@@ -138,7 +138,7 @@ contract LiquidityPool is IZKBridgeReceiver {
         address _asset,
         address _secondAsset,
         uint256 _amount
-    ) public noReentrancy {
+    ) external noReentrancy {
         // SET THE RATIO, require token balance provided in ERC20, reverted if too low
         IERC20(_secondAsset).transferFrom(
             msg.sender,
@@ -164,7 +164,7 @@ contract LiquidityPool is IZKBridgeReceiver {
      * @dev Function to remove liquidity from the pool.
      * @param _amount The percentage of liquidity to withdraw(10 -> 10%).
      */
-    function removeLiquidity(uint256 _amount) public noReentrancy {
+    function removeLiquidity(uint256 _amount) external noReentrancy {
         uint256 userLpTokens = lpTokenQuantity[msg.sender];
         uint256 percentageOfLiquidity = (userLpTokens * 1 ether) / liquidity; // How much user owns out of all Liquidity in percentage
         uint256 percentageOfUserLiquidity = (percentageOfLiquidity * _amount) /
@@ -201,7 +201,7 @@ contract LiquidityPool is IZKBridgeReceiver {
      * @dev Function to sell the first asset and receive the second asset.
      * @param _amount The amount of the first asset to sell.
      */
-    function sellAssetOne(uint256 _amount) public payable noReentrancy {
+    function sellAssetOne(uint256 _amount) external payable noReentrancy {
         //IF THE AMOUNT IS TOO BIG FOR LIQUIDITY POOL TO RETURN
         if (_amount >= getAssetOne()) {
             payable(msg.sender).transfer(msg.value);
@@ -236,7 +236,7 @@ contract LiquidityPool is IZKBridgeReceiver {
      * @dev Function to sell the second asset and receive the first asset.
      * @param _amount The amount of the second asset to sell.
      */
-    function sellAssetTwo(uint256 _amount) public payable noReentrancy {
+    function sellAssetTwo(uint256 _amount) external payable noReentrancy {
         //IF THE AMOUNT IS TOO BIG FOR LIQUIDITY POOL TO RETURN
         if (_amount >= getAssetTwo()) {
             payable(msg.sender).transfer(msg.value); // Transfer value back
@@ -326,7 +326,7 @@ contract LiquidityPool is IZKBridgeReceiver {
      * @dev Function to get the current ETH balance of the contract.
      * @return The current ETH balance of the contract.
      */
-    function addressBalance() public view returns (uint256) {
+    function addressBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
@@ -376,11 +376,10 @@ contract LiquidityPool is IZKBridgeReceiver {
     /////////////////////////////////////////////////////////////////
     // Yield Farming and Time Locks
 
-    // Daily yield tracking
-    mapping(address => uint256) public yieldTaken;
-
     /**
      * @dev Function to allow users to claim their yield. Can be called once a day.
+     *
+     * @notice sends the request to yield Calculator smart contract to compute yield with lower gas fee
      */
     function getYield() public payable {
         if (isTime() == false) {
@@ -403,6 +402,12 @@ contract LiquidityPool is IZKBridgeReceiver {
         require(sent, "Failed to send Ether");
     }
 
+    /**
+     * @dev Returns the request for lower gas fee computation
+     *
+     * @param payload returns the computation
+     *
+     */
     function zkReceive(
         uint16 srcChainId,
         address srcAddress,
@@ -423,10 +428,6 @@ contract LiquidityPool is IZKBridgeReceiver {
         // EMIT EVENT
         emit yieldFarmed(msg.sender, availableYield);
     }
-
-    // Timestamp mapping for yield farming
-    mapping(address => uint256) public lastYieldFarmedTime;
-    mapping(address => uint256) public initialLiquidityProvidedTime;
 
     /**
      * @dev Function to check if enough time has passed for the user to claim yield.

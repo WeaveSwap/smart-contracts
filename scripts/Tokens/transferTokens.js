@@ -15,7 +15,7 @@ async function transferTokens(address, amount) {
   console.log(`Successfully sent ${amount} tokens!`);
 }
 
-transferTokens("0xbf5FfE07d3DCCcb143EE3Fd9F38B1520a34fcB47", "20")
+transferTokens("0xe586ACAd58A2322779C5a62294e59C13FAD8B8A1", "20")
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);

@@ -7,17 +7,18 @@ import "./PoolTracker.sol";
 import "./LiquidityPool.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-// Error declaration for unswappable token pairs
+// Custom errors for specific failure modes, enhancing gas efficiency and error clarity.
 error SwapRouter_tokensCantBeSwapped();
 error SwapRouter_needToCallExistingFunction();
 
 /**
  * @title SwapRouter
- * @dev Facilitates token swaps utilizing defined liquidity pools, offering direct swaps and routed swaps through an intermediary.
- * Leverages the PoolTracker contract to access liquidity pool information and perform asset exchanges.
+ * @dev This contract facilitates token swaps by interacting with liquidity pools.
+ * It supports direct swaps between two tokens in a single pool, or routed swaps through an intermediary token.
+ * Utilizes the PoolTracker contract to find liquidity pools and perform the necessary asset exchanges.
  */
 contract SwapRouter {
-    // Emitted after a successful token swap
+    // Event emitted after successful token swaps, providing auditability and transparency of operations.
     event swap(
         address userAddress,
         address address1,
@@ -43,7 +44,8 @@ contract SwapRouter {
     }
 
     /**
-     * @param tracker Address of the PoolTracker contract instance.
+     * @notice Constructs the SwapRouter and initializes the PoolTracker reference.
+     * @param tracker The PoolTracker contract address.
      */
     constructor(address tracker) {
         poolTracker = PoolTracker(tracker);
@@ -192,6 +194,13 @@ contract SwapRouter {
         return output;
     }
 
+    /**
+     * @notice Retrieves the swap fee required for a swap between `address1` and `address2`.
+     * @dev Calculates the total swap fee, accounting for both direct and routed swaps, by querying the associated pools.
+     * @param address1 The source token address.
+     * @param address2 The destination token address.
+     * @return fee The total swap fee for the transaction.
+     */
     function getSwapFee(
         address address1,
         address address2

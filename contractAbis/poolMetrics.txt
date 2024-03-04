@@ -3,12 +3,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_token",
+          "name": "_poolTracker",
           "type": "address"
         },
         {
           "internalType": "address",
-          "name": "newBorrowingContract",
+          "name": "_ethPriceFeed",
           "type": "address"
         }
       ],
@@ -16,28 +16,19 @@
       "type": "constructor"
     },
     {
-      "inputs": [],
-      "name": "lending_addressNotAllowed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "lending_notEnoughTimePassed",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "lending_outOfReserve",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "lending_reserveNotAvailable",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "amoutLended",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenAddress2",
+          "type": "address"
+        }
+      ],
+      "name": "dailyRate",
       "outputs": [
         {
           "internalType": "uint256",
@@ -51,32 +42,17 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "_yield",
-          "type": "uint256"
-        }
-      ],
-      "name": "bookYield",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
         {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "tokenAddress2",
+          "type": "address"
         }
       ],
-      "name": "borrow",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "borrowingAPY",
+      "name": "dailyRoi",
       "outputs": [
         {
           "internalType": "uint256",
@@ -89,7 +65,7 @@
     },
     {
       "inputs": [],
-      "name": "borrowingContract",
+      "name": "ethPriceFeed",
       "outputs": [
         {
           "internalType": "address",
@@ -101,8 +77,14 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "farmedYield",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        }
+      ],
+      "name": "marketCap",
       "outputs": [
         {
           "internalType": "uint256",
@@ -117,7 +99,130 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "user",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenAddress2",
+          "type": "address"
+        }
+      ],
+      "name": "pairMarketCap",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenAddress2",
+          "type": "address"
+        }
+      ],
+      "name": "pairTvl",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poolTracker",
+      "outputs": [
+        {
+          "internalType": "contract PoolTracker",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenAddress2",
+          "type": "address"
+        }
+      ],
+      "name": "totalRoi",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        }
+      ],
+      "name": "tvl",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        }
+      ],
+      "name": "tvlRatio",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
           "type": "address"
         },
         {
@@ -126,136 +231,7 @@
           "type": "uint256"
         }
       ],
-      "name": "getYield",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "lastYieldFarmedTime",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "lend",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "ownerContract",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "reserve",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "newAPY",
-          "type": "uint256"
-        }
-      ],
-      "name": "setBorrowingAPY",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "token",
-      "outputs": [
-        {
-          "internalType": "contract IERC20",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdraw",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "yield",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "yieldTaken",
+      "name": "usdValue",
       "outputs": [
         {
           "internalType": "uint256",

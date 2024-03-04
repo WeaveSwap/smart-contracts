@@ -280,19 +280,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "newSwapFee",
-          "type": "uint256"
-        }
-      ],
-      "name": "changeSwapFee",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "_address",
           "type": "address"
@@ -336,19 +323,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "getLiquidity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -357,19 +331,6 @@
         }
       ],
       "name": "getLpTokenQuantity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getSwapFee",
       "outputs": [
         {
           "internalType": "uint256",
@@ -408,7 +369,7 @@
       "inputs": [],
       "name": "getYield",
       "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "payable",
       "type": "function"
     },
     {
@@ -599,19 +560,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "yieldAmount",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -628,6 +576,34 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "srcChainId",
+          "type": "uint16"
+        },
+        {
+          "internalType": "address",
+          "name": "srcAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "nonce",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes",
+          "name": "payload",
+          "type": "bytes"
+        }
+      ],
+      "name": "zkReceive",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
