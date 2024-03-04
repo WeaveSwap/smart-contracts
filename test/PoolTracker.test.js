@@ -187,8 +187,8 @@ describe("Pool tracker test", () => {
       );
       // console.log(`Swap fee ${await poolContract.swapFee()}`);
       await token1.approve(swapRouter.target, ethers.parseEther("10"));
-      const gas = ethers.parseEther("10");
-      await await swapRouter.swapAsset(
+      const gas = await swapRouter.getSwapFee(token1.target, token2.target);
+      await swapRouter.swapAsset(
         token1.target,
         token2.target,
         ethers.parseEther("10"),

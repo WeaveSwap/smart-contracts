@@ -201,12 +201,9 @@ contract LiquidityPool is IZKBridgeReceiver {
      * @dev Function to sell the first asset and receive the second asset.
      * @param _amount The amount of the first asset to sell.
      */
-    function sellAssetOne(uint256 _amount) external payable noReentrancy {
-        //IF THE AMOUNT IS TOO BIG FOR LIQUIDITY POOL TO RETURN
-        if (_amount >= getAssetOne()) {
-            payable(msg.sender).transfer(msg.value);
-            revert amountTooBig();
-        }
+    function sellAssetOne(
+        uint256 _amount
+    ) external payable noReentrancy returns (uint256) {
         //PAY THE ETH FEE
         if (msg.value < swapFee) {
             revert notEnoughGas();
@@ -230,18 +227,17 @@ contract LiquidityPool is IZKBridgeReceiver {
         //EVENTS
         emit priceChanged(assetOneAddress, assetOnePrice());
         emit priceChanged(assetTwoAddress, assetTwoPrice());
+        // Returns the amount of token
+        return result;
     }
 
     /**
      * @dev Function to sell the second asset and receive the first asset.
      * @param _amount The amount of the second asset to sell.
      */
-    function sellAssetTwo(uint256 _amount) external payable noReentrancy {
-        //IF THE AMOUNT IS TOO BIG FOR LIQUIDITY POOL TO RETURN
-        if (_amount >= getAssetTwo()) {
-            payable(msg.sender).transfer(msg.value); // Transfer value back
-            revert amountTooBig();
-        }
+    function sellAssetTwo(
+        uint256 _amount
+    ) external payable noReentrancy returns (uint256) {
         //PAY THE ETH FEE
         if (msg.value < swapFee) {
             revert notEnoughGas();
@@ -265,6 +261,8 @@ contract LiquidityPool is IZKBridgeReceiver {
         //EVENTS
         emit priceChanged(assetOneAddress, assetOnePrice());
         emit priceChanged(assetTwoAddress, assetTwoPrice());
+        //Returns amount of token
+        return result;
     }
 
     /**

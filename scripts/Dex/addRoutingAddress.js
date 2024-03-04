@@ -5,11 +5,15 @@ async function addRoutingAddress() {
   const { deployer } = await getNamedAccounts();
   const poolTracker = await ethers.getContract("PoolTracker", deployer);
   const routingToken = await ethers.getContract("TestToken1", deployer);
-  const priceFeed = await ethers.getContract("MockV3Aggregator");
+  const priceFeed = await ethers.getContract("MockV3Aggregator", deployer);
   console.log("Connected to the contract!");
 
   console.log("Adding a token to the route Addresses...");
-  await poolTracker.addRoutingAddress(routingToken, priceFeed);
+  const tx = await poolTracker.addRoutingAddress(
+    routingToken.target,
+    priceFeed.target
+  );
+  await tx.wait(1);
   console.log("Token Added!");
 }
 

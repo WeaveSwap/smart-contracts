@@ -105,44 +105,36 @@ contract SwapRouter {
                 address2,
                 routingToken
             );
-            uint256 startingBalance = IERC20(routingToken).balanceOf(
-                address(this)
-            );
-            uint256 startingBalance2 = IERC20(address2).balanceOf(
-                address(this)
-            );
+            uint256 routingTokenAmount;
             //SWAP 1, input token into routing  token
+            IERC20(address1).transferFrom(
+                msg.sender,
+                address(this),
+                inputAmount
+            );
+            IERC20(address1).approve(address(pool1), inputAmount);
             if (pool1.assetOneAddress() == address1) {
-                IERC20(address1).transferFrom(
-                    msg.sender,
-                    address(this),
+                routingTokenAmount = pool1.sellAssetOne{value: pool1.swapFee()}(
                     inputAmount
                 );
-                IERC20(address1).approve(address(pool1), inputAmount);
-                pool1.sellAssetOne{value: pool1.swapFee()}(inputAmount);
             } else {
-                IERC20(address1).transferFrom(
-                    msg.sender,
-                    address(this),
+                routingTokenAmount = pool1.sellAssetTwo{value: pool1.swapFee()}(
                     inputAmount
                 );
-                IERC20(address1).approve(address(pool1), inputAmount);
-                pool1.sellAssetTwo{value: pool1.swapFee()}(inputAmount);
             }
             //SWAP 2, routing token into output token
-            uint256 routingTokenInput = IERC20(routingToken).balanceOf(
-                address(this)
-            ) - startingBalance;
-            if (pool2.assetOneAddress() == address1) {
-                IERC20(routingToken).approve(address(pool2), routingTokenInput);
-                pool2.sellAssetOne{value: pool2.swapFee()}(routingTokenInput);
+            uint256 amountOutput;
+            IERC20(routingToken).approve(address(pool2), routingTokenAmount);
+            if (pool2.assetOneAddress() == routingToken) {
+                amountOutput = pool2.sellAssetOne{value: pool2.swapFee()}(
+                    routingTokenAmount
+                );
             } else {
-                IERC20(routingToken).approve(address(pool2), routingTokenInput);
-                pool2.sellAssetTwo{value: pool2.swapFee()}(routingTokenInput);
+                amountOutput = pool2.sellAssetTwo{value: pool2.swapFee()}(
+                    routingTokenAmount
+                );
             }
-            uint256 address2Output = IERC20(address2).balanceOf(address(this)) -
-                startingBalance2;
-            IERC20(address2).transfer(msg.sender, address2Output);
+            IERC20(address2).transfer(msg.sender, amountOutput);
             // Unrequired fee
             uint256 unrequiredFee = msg.value -
                 pool1.swapFee() -
