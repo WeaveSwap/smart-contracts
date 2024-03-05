@@ -159,16 +159,6 @@ The primary aim of the `PoolMetrics` contract is to offer transparent, real-time
 
 ---
 
-To round out your README.md and make it more complete, adding a **License** section is crucial, as it informs contributors and users of the legal permissions attached to the software. Additionally, I'll suggest adding a **Contact** section for direct communication, and a **Acknowledgements** section to credit any contributors, open source projects, or third parties that have been instrumental in the development of your project.
-
-Here's how you could incorporate these sections:
-
----
-
-Your README.md for the Decentralized Exchange and Lending Platform - WeaveSwap is comprehensive, covering the core functionalities and goals of the main contracts in your platform. Since you mentioned using Hardhat for development, it would be beneficial to include a section on **Development Setup** to guide other developers on how to set up their environment for contributing to or testing your platform. Additionally, considering the inclusion of instructions for testing and potential contribution guidelines could enhance the document's utility for developers. Here's a suggested addition:
-
----
-
 ## Development Setup
 
 This project is developed using Hardhat, a powerful Ethereum development environment that facilitates testing, compiling, and deploying smart contracts. Follow the steps below to set up your development environment:
