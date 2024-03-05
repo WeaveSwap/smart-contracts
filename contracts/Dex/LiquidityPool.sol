@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 
 // Importing necessary contracts and interfaces
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "../Router/InterfaceBridge.sol";
+import "../Bridge/InterfaceBridge.sol";
 import "./PoolTracker.sol";
 
 // Custom errors for more descriptive and gas-efficient failure handling.

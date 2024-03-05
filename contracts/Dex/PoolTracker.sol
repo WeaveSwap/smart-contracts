@@ -6,7 +6,7 @@ pragma solidity ^0.8.9;
 import "./LiquidityPool.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "../Router/InterfaceBridge.sol";
+import "../Bridge/InterfaceBridge.sol";
 
 // Custom error definitions for specific failure conditions
 error PoolTracker_pairAlreadyExists();

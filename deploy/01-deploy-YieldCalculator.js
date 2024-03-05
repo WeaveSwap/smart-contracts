@@ -27,7 +27,7 @@ module.exports = async () => {
     await verify(
       yieldCalculator.address,
       args,
-      "contracts/Router/YieldCalculator.sol:YieldCalculator"
+      "contracts/Bridge/YieldCalculator.sol:YieldCalculator"
     );
   }
 };
