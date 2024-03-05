@@ -10,8 +10,9 @@ module.exports = async () => {
   //GET THE TOKENS AND ADDRESSES
   const ethPriceFeedAddress = "0x143db3CEEfbdfe5631aDD3E50f7614B6ba708BA7";
   const poolTracker = await ethers.getContract("PoolTracker", deployer);
+  const swapRouter = await ethers.getContract("SwapRouter", deployer);
 
-  args = [poolTracker.target, ethPriceFeedAddress];
+  args = [poolTracker.target, ethPriceFeedAddress, swapRouter.target];
 
   const blockConfirmations = developmentChains.includes(network.name) ? 0 : 6;
   log("Deploying...");

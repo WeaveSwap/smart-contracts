@@ -5,6 +5,7 @@ pragma solidity ^0.8.9;
 // Importing necessary contracts and interfaces
 import "./LiquidityPool.sol";
 import "./PoolTracker.sol";
+import "./WeaveSwap.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
@@ -15,6 +16,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 contract PoolMetrics {
     // State variables
     PoolTracker public poolTracker;
+    SwapRouter public swapRouter;
     address public ethPriceFeed;
 
     /**
@@ -22,8 +24,13 @@ contract PoolMetrics {
      * @param _poolTracker Address of the PoolTracker contract.
      * @param _ethPriceFeed Address of the ETH price feed contract.
      */
-    constructor(address _poolTracker, address _ethPriceFeed) {
+    constructor(
+        address _poolTracker,
+        address _ethPriceFeed,
+        address _swapRouter
+    ) {
         poolTracker = PoolTracker(_poolTracker);
+        swapRouter = SwapRouter(payable(_swapRouter));
         ethPriceFeed = _ethPriceFeed;
     }
 
@@ -45,7 +52,7 @@ contract PoolMetrics {
     function pairMarketCap(
         address tokenAddress,
         address tokenAddress2
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 tokenAmount = IERC20(tokenAddress).totalSupply();
         uint256 tokenAmount2 = IERC20(tokenAddress2).totalSupply();
         uint256 totalMarketCap = usdValue(tokenAddress, tokenAmount) +
@@ -103,6 +110,20 @@ contract PoolMetrics {
     }
 
     /**
+     * @dev Computes the TVL ratio of a pool, which is pair TVL divided by pair market capitalization.
+     * @param tokenAddress Address of the token.
+     * @return The TVL ratio of the token.
+     */
+    function pairTvlRatio(
+        address tokenAddress,
+        address tokenAddress2
+    ) public view returns (uint256) {
+        return
+            (pairTvl(tokenAddress, tokenAddress2) * 100) /
+            pairMarketCap(tokenAddress, tokenAddress2);
+    }
+
+    /**
      * @dev Computes the total return on investment (ROI) for a liquidity pool with two tokens.
      * @param tokenAddress Address of the first token.
      * @param tokenAddress2 Address of the second token.
@@ -120,7 +141,7 @@ contract PoolMetrics {
         uint256 tokenAmount = IERC20(tokenAddress).balanceOf(address(pool));
         uint256 tokenAmount2 = IERC20(tokenAddress2).balanceOf(address(pool));
         return
-            (profit * 100) /
+            ((profit * 100) * 10 ** 26) /
             (usdValue(tokenAddress, tokenAmount) +
                 usdValue(tokenAddress2, tokenAmount2));
     }
@@ -192,11 +213,30 @@ contract PoolMetrics {
                 address(0)
             ) {
                 // Token value
-                uint256 tokenValue = LiquidityPool(
-                    poolTracker.pairToPool(tokenAddress, routingAddress)
-                ).getSwapQuantity(tokenAddress, 1);
-                return
-                    uint256(usdConverter(priceFeed)) * tokenValue * tokenAmount;
+                // uint256 tokenValue = swapRouter.getSwapAmount(
+                //     tokenAddress,
+                //     routingAddress,
+                //     tokenAmount
+                // );
+                LiquidityPool pool = poolTracker.pairToPool(
+                    tokenAddress,
+                    routingAddress
+                );
+                uint256 tokenValue;
+                if (pool.assetOneAddress() == tokenAddress) {
+                    tokenValue =
+                        (uint256(usdConverter(priceFeed)) *
+                            tokenAmount *
+                            pool.getAssetOne()) /
+                        pool.getAssetTwo();
+                } else {
+                    tokenValue =
+                        (uint256(usdConverter(priceFeed)) *
+                            tokenAmount *
+                            pool.getAssetTwo()) /
+                        pool.getAssetOne();
+                }
+                return tokenValue;
             }
         }
         // If there is no possible USD conversion
