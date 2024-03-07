@@ -123,6 +123,10 @@ describe("Pool tracker test", () => {
       expect((await poolTracker.tokenList())[0]).to.equal(token1.target);
       expect((await poolTracker.tokenList())[1]).to.equal(token2.target);
       expect((await poolTracker.tokenList()).length).to.equal(2);
+      expect((await poolTracker.getPools()).length).to.equal(1);
+      expect((await poolTracker.getPools())[0]).to.equal(
+        await poolTracker.pairToPool(token1.target, token2.target)
+      );
     });
     it("Revert if pool pair exists", async () => {
       await token1.approve(poolTracker.target, approveAmount);
@@ -228,15 +232,15 @@ describe("Pool tracker test", () => {
         priceAggregator.target
       );
       expect(
-        await poolTracker.tokenToRoute(token2.target, token1.target)
+        await swapRouter.tokenToRoute(token2.target, token1.target)
       ).to.equal(token3.target);
       expect(
-        await poolTracker.tokenToRoute(token1.target, token2.target)
+        await swapRouter.tokenToRoute(token1.target, token2.target)
       ).to.equal(token3.target);
       expect(
-        await poolTracker.tokenToRoute(token3.target, token1.target)
+        await swapRouter.tokenToRoute(token3.target, token1.target)
       ).to.equal("0x0000000000000000000000000000000000000000");
-      await expect(poolTracker.tokenToRoute(token1.target, token1.target)).to.be
+      await expect(swapRouter.tokenToRoute(token1.target, token1.target)).to.be
         .reverted;
     });
     it("Gets the routing price", async () => {

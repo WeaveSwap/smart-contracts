@@ -12,6 +12,11 @@
     },
     {
       "inputs": [],
+      "name": "PoolTracker_cantSwapSameToken",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "SwapRouter_tokensCantBeSwapped",
       "type": "error"
     },
@@ -130,6 +135,30 @@
       "name": "swapAsset",
       "outputs": [],
       "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "address1",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "address2",
+          "type": "address"
+        }
+      ],
+      "name": "tokenToRoute",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

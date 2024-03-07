@@ -68,6 +68,9 @@ contract PoolTracker {
     // All the available tokens
     address[] public tokens;
 
+    // All pools
+    address[] public pools;
+
     /**
      * @dev Creates a liquidity pool for a given pair of ERC20 tokens. This function handles the initial
      * transfer of token amounts from the caller, sets up the liquidity pool, and updates internal mappings.
@@ -110,6 +113,7 @@ contract PoolTracker {
             _assetOneAddress,
             _assetTwoAddress
         );
+        pools.push(address(poolAddress));
         // Approve
         IERC20(_assetOneAddress).approve(address(poolAddress), amountOne);
         IERC20(_assetTwoAddress).approve(address(poolAddress), amountTwo);
@@ -205,66 +209,6 @@ contract PoolTracker {
     }
 
     /**
-     * @dev Determines the optimal routing token for a swap between two tokens,
-     * based on available liquidity and price feeds.
-     *
-     * @param address1 The address of the first token.
-     * @param address2 The address of the second token.
-     * @return address The address of the optimal routing token.
-     */
-    function tokenToRoute(
-        address address1,
-        address address2
-    ) external view returns (address) {
-        if (address1 == address2) {
-            revert PoolTracker_cantSwapSameToken();
-        }
-        address[] memory token1pairs = poolPairs[address1];
-        address[] memory token2pairs = poolPairs[address2];
-
-        address routingToken;
-        int routingTokenLiquidity;
-
-        for (uint256 i; i < token1pairs.length; i++) {
-            for (uint256 a; a < token2pairs.length; a++) {
-                if (token1pairs[i] == token2pairs[a]) {
-                    for (uint256 b; b < routingAddresses.length; b++) {
-                        if (
-                            routingAddresses[b].tokenAddress == token1pairs[i]
-                        ) {
-                            (, int answer, , , ) = AggregatorV3Interface(
-                                routingAddresses[b].priceFeed
-                            ).latestRoundData();
-                            int liquidity;
-                            LiquidityPool pool1 = pairToPool[address1][
-                                routingAddresses[b].tokenAddress
-                            ];
-                            LiquidityPool pool2 = pairToPool[address2][
-                                routingAddresses[b].tokenAddress
-                            ];
-                            uint256 balance1 = IERC20(
-                                routingAddresses[b].tokenAddress
-                            ).balanceOf(address(pool1));
-                            uint256 balance2 = IERC20(
-                                routingAddresses[b].tokenAddress
-                            ).balanceOf(address(pool2));
-                            liquidity =
-                                (int(balance1) + int(balance2)) *
-                                answer;
-                            if (liquidity > routingTokenLiquidity) {
-                                // Best choice so far if the liquidity is bigger than previous best token
-                                routingToken = routingAddresses[b].tokenAddress;
-                                routingTokenLiquidity = liquidity;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return routingToken;
-    }
-
-    /**
      * @dev Returns all array of all tradable tokens on the platform
      *
      * @return array Returns tokens array.
@@ -291,6 +235,21 @@ contract PoolTracker {
         address tokenAddress
     ) external view returns (uint256) {
         return poolPairs[tokenAddress].length;
+    }
+
+    function getPoolPairs(
+        address tokenAddress
+    ) public view returns (address[] memory) {
+        return poolPairs[tokenAddress];
+    }
+
+    /**
+     * @dev Retrieve pool addresses
+     *
+     * @return array Returns pools array
+     */
+    function getPools() public view returns (address[] memory) {
+        return pools;
     }
 
     /**

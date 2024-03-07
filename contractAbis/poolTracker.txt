@@ -12,11 +12,6 @@
     },
     {
       "inputs": [],
-      "name": "PoolTracker_cantSwapSameToken",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "PoolTracker_pairAlreadyExists",
       "type": "error"
     },
@@ -136,12 +131,44 @@
           "type": "address"
         }
       ],
+      "name": "getPoolPairs",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenAddress",
+          "type": "address"
+        }
+      ],
       "name": "getPoolPairsLength",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPools",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",
@@ -216,6 +243,25 @@
           "type": "uint256"
         }
       ],
+      "name": "pools",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
       "name": "routingAddresses",
       "outputs": [
         {
@@ -240,30 +286,6 @@
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "address1",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "address2",
-          "type": "address"
-        }
-      ],
-      "name": "tokenToRoute",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",

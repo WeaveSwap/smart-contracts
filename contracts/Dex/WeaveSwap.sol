@@ -94,9 +94,9 @@ contract SwapRouter {
             uint256 unrequiredFee = msg.value - pool.swapFee(); // In case the msg.sender sent more value than it is required
             (bool sent, ) = payable(msg.sender).call{value: unrequiredFee}("");
             require(sent, "Failed to send Ether");
-        } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
+        } else if (tokenToRoute(address1, address2) != address(0)) {
             // Routed swap scenario
-            address routingToken = poolTracker.tokenToRoute(address1, address2);
+            address routingToken = tokenToRoute(address1, address2);
             LiquidityPool pool1 = poolTracker.pairToPool(
                 address1,
                 routingToken
@@ -164,8 +164,8 @@ contract SwapRouter {
         if (poolTracker.exists(address1, address2)) {
             LiquidityPool pool = poolTracker.pairToPool(address1, address2);
             output = pool.getSwapQuantity(address1, inputAmount);
-        } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
-            address routingToken = poolTracker.tokenToRoute(address1, address2);
+        } else if (tokenToRoute(address1, address2) != address(0)) {
+            address routingToken = tokenToRoute(address1, address2);
             LiquidityPool pool1 = poolTracker.pairToPool(
                 address1,
                 routingToken
@@ -201,8 +201,8 @@ contract SwapRouter {
         if (poolTracker.exists(address1, address2)) {
             LiquidityPool pool = poolTracker.pairToPool(address1, address2);
             fee += pool.swapFee();
-        } else if (poolTracker.tokenToRoute(address1, address2) != address(0)) {
-            address routingToken = poolTracker.tokenToRoute(address1, address2);
+        } else if (tokenToRoute(address1, address2) != address(0)) {
+            address routingToken = tokenToRoute(address1, address2);
             LiquidityPool pool1 = poolTracker.pairToPool(
                 address1,
                 routingToken
@@ -218,6 +218,75 @@ contract SwapRouter {
             revert SwapRouter_tokensCantBeSwapped();
         }
         return fee;
+    }
+
+    /**
+     * @dev Determines the optimal routing token for a swap between two tokens,
+     * based on available liquidity and price feeds.
+     *
+     * @param address1 The address of the first token.
+     * @param address2 The address of the second token.
+     * @return address The address of the optimal routing token.
+     */
+    function tokenToRoute(
+        address address1,
+        address address2
+    ) public view returns (address) {
+        if (address1 == address2) {
+            revert PoolTracker_cantSwapSameToken();
+        }
+        address[] memory token1pairs = poolTracker.getPoolPairs(address1);
+        address[] memory token2pairs = poolTracker.getPoolPairs(address2);
+
+        address routingToken;
+        int routingTokenLiquidity;
+
+        for (uint256 i; i < token1pairs.length; i++) {
+            for (uint256 a; a < token2pairs.length; a++) {
+                if (token1pairs[i] == token2pairs[a]) {
+                    for (
+                        uint256 b;
+                        b < poolTracker.getRoutingAddressesLength();
+                        b++
+                    ) {
+                        (address tokenAddress, address priceFeed) = poolTracker
+                            .routingAddresses(b);
+                        if (tokenAddress == token1pairs[i]) {
+                            int liquidity;
+                            LiquidityPool pool1 = poolTracker.pairToPool(
+                                address1,
+                                tokenAddress
+                            );
+                            LiquidityPool pool2 = poolTracker.pairToPool(
+                                address2,
+                                tokenAddress
+                            );
+                            uint256 balance1 = IERC20(tokenAddress).balanceOf(
+                                address(pool1)
+                            );
+                            uint256 balance2 = IERC20(tokenAddress).balanceOf(
+                                address(pool2)
+                            );
+                            liquidity =
+                                (int(balance1) + int(balance2)) *
+                                usdConverter(priceFeed);
+                            if (liquidity > routingTokenLiquidity) {
+                                // Best choice so far if the liquidity is bigger than previous best token
+                                routingToken = tokenAddress;
+                                routingTokenLiquidity = liquidity;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return routingToken;
+    }
+
+    function usdConverter(address priceFeed) internal view returns (int) {
+        (, int answer, , , ) = AggregatorV3Interface(priceFeed)
+            .latestRoundData();
+        return answer;
     }
 
     /**

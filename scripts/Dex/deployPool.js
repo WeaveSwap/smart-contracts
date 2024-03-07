@@ -5,7 +5,7 @@ async function deployPool() {
   const { deployer } = await getNamedAccounts();
   const poolTracker = await ethers.getContract("PoolTracker", deployer);
   const token1 = await ethers.getContract("TestToken1", deployer);
-  const token2 = await ethers.getContract("TestToken3", deployer);
+  const token2 = await ethers.getContract("TestToken2", deployer);
   const swapRouter = await ethers.getContract("SwapRouter", deployer);
   // const token3 = await ethers.getContract("TestToken2", deployer);
   console.log(`This is the pool tracker address ${poolTracker.target}`);

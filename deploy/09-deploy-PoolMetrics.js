@@ -34,4 +34,4 @@ module.exports = async () => {
   }
 };
 
-module.exports.tags = ["all", "onChainMetrics", "poolMetrics", "bsc"];
+module.exports.tags = ["all", "onChainMetrics", "poolMetrics", "bsc", "dex"];
